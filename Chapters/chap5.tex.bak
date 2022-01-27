@@ -1,0 +1,531 @@
+\chapter{\quad\quad 监督的流形嵌入离散跨模态哈希方法}
+\label{chap5}
+\echapter{Supervised Discrete Manifold-Embedded Cross-Modal Hashing}
+
+媒体检索中有一类很重要的检索任务，那就是跨模态检索。通常来说，跨模态检索中，查询数据属于一种模态（如查询数据可能是文本），而待检索的数据库属于另外一个模态（如待检索数据库为图像数据集）。本章中我们将提出一种针对跨模态检索任务的哈希学习方法，名为监督的流形嵌入离散跨模态哈希学习方法，英文名为Supervised Discrete Manifold-Embedded Cross-Modal Hashing（简写为SDMCH）。为了学习出准确的哈希码，该方法充分考虑了数据的流形相似性、数据的监督信息以及不同数据模态之间的关系，并且使用了离散的优化方法。多个数据集上的实验结果验证了该方法的有效性。
+
+
+
+
+
+
+\section{引言}
+\esection{Introduction}
+
+因为跨模态检索在很多计算机领域都有很重要的用处，如视觉检索、机器翻译、数据挖掘等，所以在过去的几十年中，它获得了很多科研机构和科研工作者的关注。通常，在跨模态检索中，可以使用具有一种模态（例如，文本）的查询数据来检索相关的具有其他模态的项目（例如，图像）。随着跨模态检索任务所要面对的数据量激增，传统的跨模态检索技术的效率变得难以接受。最近，因为哈希学习方法具有查询速度快，存储成本低的优点，所以哈希学习技术被越来越多地使用于跨模态检索任务\cite{zhu2013linear,wei2017cross,yu2014discriminative,xu2016dictionary,yan2016supervised,zhang2017semi,li2018scratch,wu2015quantized}。。
+
+
+
+现有的跨模态哈希学习方法可以分为无监督跨模态哈希和监督跨模态哈希。代表性的无监督方法有Inter-Media Hashing（IMH）\cite{song2013inter}、Latent Semantic Sparse Hashing（LSSH）\cite{zhou2014latent}、Collective Matrix Factorization Hashing （CMFH）\cite{ding2014collective}、Composite Correlation Quantization（CCQ）\cite{long2016composite}等；代表性的监督跨模态哈希方法有Cross-View Hashing（CVH）\cite{kumar2011learning}、Semantic Correlation Maximization（SCM）\cite{zhang2014large}、Semantics Preserving Hashing （SePH）\cite{lin2015semantics}和Discrete Cross-Modal Hashing（DCH）\cite{xu2017learning}等。为了能够将数据的从原始特征映射到公共的海明空间中去，IMH 方法通过保持模态内和模态间的一致性来学习线性的哈希函数。LSSH方法分别利用稀疏编码技术和矩阵分解技术来处理图像模态和文本模态，从而得到潜在语义特征，并通过把得到的潜在语义特征映射到一个联合的抽象空间来生成样本的哈希码。CMFH利用了带隐语义模型的协同矩阵分解技术来处理不同模态的数据，并最终生成样本的哈希码。CCQ方法把多个模态之间的相关性和量化损失融合到一个潜在语义分析框架中，从而生成哈希码。CVH通过把单模态哈希方法SH 扩展到多模态情形中，从而完成哈希函数的学习。SCM方法可以无缝地将语义标签嵌入到针对大规模数据建模的哈希学习过程中去。SePH方法是一个两步哈希方法，其利用最小化哈希码和给定的语义信息之间的KL散度来学习哈希码，然后利用了核逻辑回归方法来生成每个模态特定的非线性哈希函数。DCH方法把哈希学习问题形式化到线性分类框架中，并设计了离散优化的策略来学习哈希码。
+
+
+
+尽管很多方法已经存在，但是跨模态哈希学习中仍有很多值得深入探究的问题。1）对于一个检索模型来说，深入考虑媒体数据的非线性流形结构，能促进模型的学习\cite{yang2008harmonizing,zhang2015full}。但是现有的大部分跨模态哈希方法都不能很好地去利用数据的流形结构。2）他们中的大部分方法，仅仅考虑近邻的关系而忽略了近邻间的相近性。3）虽然有些跨模态哈希方法利用了流形学习，但是他们有的忽略了语义信息，有的在哈希码求解的过程中采用先松弛后量化的优化策略，进而导致较大的量化误差。
+
+为了解决上述的问题，我们在本章中提出了一种新型的哈希方法，名为监督的流形嵌入离散跨模态哈希学习方法，英文名为Supervised Discrete Manifold-Embedded Cross-Modal Hashing（下文均用简写SDMCH来指代该方法）。SDMCH方法既可以考虑数据的非线性流形结构，同时也构建了多个模态数据的关系。此外，该方法还可以将监督信息加入到学习过程中去。在优化哈希码的时候，我们使用了离散优化策略，即不松弛哈希码的二进制约束，从而避免引入额外的量化误差。此外，我们按照两步哈希的策略设计了SDMCH，这样可以使得该方法灵活有效。
+
+
+
+
+\section{相关方法概述}
+\esection{Related Work}
+
+
+\subsection{运用流形学习的哈希方法}
+\esubsection{Hashing with Manifold Learning}
+
+利用流形学习技术可以提高多媒体检索的效果\cite{yang2008harmonizing,zhang2015full}。因此，很多哈希方法使用了流形学习技术。其中，Spectral Hashing\cite{weiss2009spectral}是最广为人知的一种方法，其通过对流形的Laplace-Beltrami特征函数进行阈值化操作从而得到哈希码。其它利用了流形学习的有代表性的哈希方法包括Anchor Graph Hashing\cite{liu2011hashing}、Locally Linear Hashing\cite{irie2014locally}、Inductive Manifold Hashing\cite{shen2013inductive}、Discrete Locally Linear
+Embedding Hashing\cite{ji2017toward}等。但是，这些方法只适用于查询数据和待检索数据属于相同的模态的情形，也就是只能做单模态媒体检索任务。为了处理同时有多个模态数据的媒体检索任务，一些基于流形学习的多模态哈希方法被提出，例如，Composite
+Hashing with Multiple Information Sources\cite{zhang2011composite}、Multiple Feature Hashing\cite{zhang2011composite}、Multi-View Complementary Hash\cite{liu2015multi}、Discrete Multi-View Hashing\cite{yang2017discrete}等。虽然这些方法可以处理多模态媒体检索，但是他们仍无法进行跨模态媒体检索任务，因此限制了他们的使用范围。
+
+近期，有一些初步的研究在尝试使用基于流形学习的哈希方法做跨模态媒体检索任务，但是仍存在很多需要改进的地方。其中一些方法不能很好地使用监督信息来促进媒体检索的准确度，例如Inter-Media Hashing\cite{song2013inter}、Sparse Multi-Modal Hashing\cite{wu2014sparse}、Full-Space Local Topology Extraction\cite{zhang2015full} 等。还有一些方法在求解哈希码的时候，先松弛掉哈希码的二进制约束，进而优化松弛后的目标函数并得到一个实值的解，最终通过把实值解量化成二进制的哈希码。这样的求解策略会导致很大的量化误差。这样的方法包括Cross-View Hashing\cite{kumar2011learning}、Multimodal Similarity-Preserving Hashing\cite{masci2014multimodal}、Supervised Matrix Factorization Hashing\cite{tang2016supervised}、Hetero-Manifold Regularisation\cite{zheng2018hetero}。
+
+正如上文所说，我们在本章中的方法将能够解决现有方法的不足。
+
+
+\subsection{两步哈希}
+\esubsection{Two-Step Hashing}
+
+本章中我们使用两步哈希策略来设计SDMCH，且第一步中的哈希函数的设计及其对应的优化算法是我们区别于其它两步哈希方法的地方。在第二步中，考虑到效率问题，我们选取线性分类器来构建哈希函数。
+
+关于两步哈希的相关介绍，请参考章节\ref{chap-tsh}。
+
+
+
+
+\section{监督的流形嵌入离散跨模态哈希学习方法}
+\esection{Supervised Discrete Manifold-Embedded Cross-Modal Hashing}
+
+\subsection{符号和问题描述}
+\esubsection{Notations and Problem Definition}
+
+假设存在$n$个样本，且每个样本都含有$m$个模态的信息。我们用$\textbf{X}^{t}=[\textbf{x}^{t}_1, \textbf{x}^{t}_2,\cdots, \textbf{x}^{t}_n] \in \mathbb{R}^{n \times d_t}$来表示第$t$个模态的特征，其中$d_t$ 是当前特征空间的维度，且有$t=1,\cdots,m$。和现有的相关方法一致，我们假设$\sum_{i=1}^{n}\textbf{x}^{t}_i=0$ 成立。此外，所有样本的标签矩阵为$\textbf{Y}\in\{0,1\}^{n\times c}$，其中$c$ 是类别数量，${Y}_{ik}=1$代表样本$\textbf{x}_i$属于类别$k$，反之则有${Y}_{ik}=0$。我们的模型要学到所有样本的哈希码，记为$\textbf{B}\in\{-1,1\}^{n\times r}$，其中$r$ 是哈希码的位数。$\left \lVert \cdot \right \rVert _F$是矩阵的Frobenius范数。是$Tr(\cdot)$矩阵的迹。$sgn(\cdot)$是符号函数（定义为：在$x\geq 0$ 时$sgn(x)=1$；在$x<0$时$sgn(x)=-1$）。
+
+因为跨模态哈希存在不只一个模态的数据，所以需要为每个模态学出一个哈希函数，从而可以为来自该模态的查询数据生成对应的哈希码。我们用$\textbf{X}^t_{query}$表示查询数据的第$t$个模态的特征，则其哈希码$\textbf{B}_{query}$ 由下面的哈希函数给出：
+\begin{equation}
+\textbf{B}_{query}=sgn(\textbf{X}^t_{query}\textbf{W}^t ).
+\end{equation}
+其中，$\textbf{W}^{t}$是第$t$个模态的哈希投影矩阵。
+
+
+\subsection{流形结构学习}
+\esubsection{Manifold Structure Learning}
+
+为了在哈希码学习过程中能嵌入原数据的流形结构，我们首先要用局部线性嵌入方法\cite{roweis2000nonlinear}构建一个包含流形相似性的矩阵。具体地来说，一个样本点可以被其\textit{K}个最近邻用带权重的线性组合来近似出来，其公式形式如下：
+\begin{equation}\label{cmheq1}
+\begin{split}
+&\min\limits_{\textbf{P}^{t}}\sum_{i=1}^n \|\textbf{x}_i^t-\sum_{j}^K \textbf{P}_{ij}^{t}\textbf{x}_j^{t}\|_F^2, \ \ s.t.\ \sum_{j}\textbf{P}_{ij}^{t}=1,\\
+\end{split}
+\end{equation}
+其中，如果样本点$x_i$与样本点$x_j$在第$t$个模态空间内不是近邻，则有$\textbf{P}_{ij}^t=0$ ；$K$是一个样本点的最近邻个数。通过求解公式\ref{cmheq1}，我们可以求得权值$\textbf{P}^{t}$ （$t=1,\cdots,m$）。为了节省空间，我们此处不具体说明如何去求解公式\ref{cmheq1}，读者可以从其论文中\cite{roweis2000nonlinear}获悉。此外，别的流形学习模型均可替代此处的局部线性嵌入方法。因为我们本章的重点不在于用何种方式获得流形结构，而是注重于如何在学习哈希码的过程中保持流形结构，故我们此处只选用局部线性嵌入方法来引出后续的内容。
+
+然后，把需要保持的流形结构相似性矩阵记为$\textbf{S}^t$。当$\textbf{x}_j^t$是$\textbf{x}_i^t$的第$p$个邻居的时候，$\textbf{S}_{ij}^{t}=|\textbf{P}_{ip}^{t}|$；反之，则有$\textbf{S}_{ij}^{t}=0$。其中，$\textbf{P}_{ip}^{t}$ 是$\textbf{P}_{i}^{t}$的第$j$个元素。此外，为了保证该相似性矩阵的对称性，我们对其进一步地变换$\textbf{S}^{t}\leftarrow((\textbf{S}^{t})^\top +\textbf{S}^{t})$。
+
+
+
+\subsection{目标函数}
+\esubsection{Objective Function}
+
+\subsubsection{流形嵌入}
+\esubsubsection{Manifold Embedding}
+
+为了达到在海明空间中保持住原空间内的流形结构的效果，我们定义了如下的损失函数：
+\begin{equation}\label{cmheq2}
+\begin{split}
+ &\min_{\textbf{F},\textbf{B}} \quad \sum_{t=1}^m \lambda_t \sum_{i,j=1}^n\textbf{S}_{ij}^t  \parallel \textbf{F}_i-\textbf{F}_j\parallel^2_F+\alpha \parallel \textbf{B}-\textbf{F}\parallel^2_F,\\
+& \ \quad \quad = \sum_{t=1}^M \lambda_t Tr(\textbf{F}^\top \textbf{L}^t \textbf{F})+\alpha \parallel \textbf{B}-\textbf{F}\parallel^2_F, \\
+   &s.t. \ \ \   \textbf{B} \in \{-1,1\}^{n \times r},
+\end{split}
+\end{equation}
+其中，$\textbf{L}^t=\textbf{D}^t-\textbf{S}^t$，$\textbf{D}^t$是一个对角矩阵，且对角线上元素为$\textbf{D}^t_{ii}=\sum_{j=1}^n \textbf{S}_{ij}^t$。在上式中，$\textbf{F}$是一个实值的中间表示项，其作用是来近似哈希码矩阵$\textbf{B}$。因此，上式中的第一项是用来保持流形相似性的，第二项是用来保证$\textbf{F}$ 和$\textbf{B}$ 尽可能接近。
+
+
+\subsubsection{保持标签信息}
+\esubsubsection{Label Preserving}
+
+为了最大化地使用标签信息，我们假设标签信息可以从哈希码变换得到。形式化损失函数如下：
+\begin{equation}\label{cmheq3}
+\min_{G} \ \  \parallel \textbf{Y}-\textbf{BG}\parallel^2_F,
+\end{equation}
+其中，$\textbf{G}$是由哈希码空间到标签空间的投影矩阵。
+
+
+\subsubsection{最终目标函数}
+\esubsubsection{Overall Objective Function}
+
+我们的模型既要保持流形相似性信息，也要保持标签信息。因此，通过把公式\ref{cmheq2}和公式\ref{cmheq3}组合，我们得到最终的目标函数：
+\begin{equation}\label{cmheq4}
+\begin{split}
+ &\min_{\textbf{F},\textbf{Z},\textbf{G},\textbf{B}} \quad \sum_{t=1}^m \lambda_t Tr(\textbf{F}^\top \textbf{L}^t \textbf{F})+\alpha \parallel \textbf{B}-\textbf{F}\parallel^2_F\\
+ & \quad +\beta \parallel \textbf{B}-\textbf{Z}\parallel^2_F+\gamma \parallel \textbf{Y}-\textbf{ZG}\parallel^2_F,\\
+ &s.t. \ \ \   \textbf{B}\in \{-1,1\}^{n \times r},
+\end{split} \end{equation}
+其中，$\lambda_t$、$\alpha$、$\beta$和$\gamma$均为参数。值得注意的是，在公式\ref{cmheq4}中的第四项中，我们把哈希码矩阵$\textbf{B}$换成了一个保持了语义信息的隐含表示$\textbf{Z}$。此外，第三项的作用是让哈希码矩阵$\textbf{B}$和该隐含表示$\textbf{Z}$尽可能地接近。通过这两项，我们可以把标签信息最终嵌入到哈希码空间中。
+
+通过求解公式\ref{cmheq4}，我们学到的哈希码既可以保持流形信息也可以保持语义信息。此外，因为引入了$\textbf{F}$ 和$\textbf{Z}$，公式\ref{cmheq4} 可以通过迭代优化的模式简单地求解，并且可以不需要松弛哈希码的约束条件。
+
+
+\subsection{优化算法}
+\esubsection{Optimization}
+
+为了求解公式\ref{cmheq4}，我们提出了一个迭代优化算法，且每一轮迭代中都包含了4个步骤，分别是用于求解$\textbf{F}$，$\textbf{Z}$，$\textbf{G}$和$\textbf{B}$的$\textbf{F}$步骤，$\textbf{Z}$步骤，$\textbf{G}$ 步骤和$\textbf{B}$ 步骤。
+
+
+\subsubsection{$\textbf{F}$步骤}
+\esubsubsection{$\textbf{F}$ Step}
+
+在该步骤下，我们固定除了$\textbf{F}$之外的其他变量，进而求解关于$\textbf{F}$的优化问题。此时，公式\ref{cmheq4}可以写成：
+\begin{equation}\label{cmheq5}
+\begin{split}
+ &\min_{\textbf{F}} \sum_{t=1}^m \lambda_t Tr(\textbf{F}^\top \textbf{L}^t \textbf{F})+\alpha \parallel \textbf{B}-\textbf{F}\parallel^2_F.\\
+\end{split}\end{equation}
+
+通过把上式对$\textbf{F}$求导并取零，我们可以得到如下的解：
+\begin{equation}\label{cmheq6}
+\textbf{F}=\textbf{AB},
+\end{equation}
+其中，$\textbf{A}=\alpha (\sum_{t=1}^m \lambda_t \textbf{L}^t+\alpha \textbf{I})^{-1}$ 是一个常数，可以在迭代优化之前预先计算，并在迭代时直接使用。
+
+
+\subsubsection{$\textbf{Z}$步骤}
+\esubsubsection{$\textbf{Z}$ Step}
+
+在步骤中，我们固定$\textbf{F}$、$\textbf{G}$和$\textbf{B}$，和从而求解如下的关于$\textbf{Z}$的子问题：
+\begin{equation}\label{cmheq7}
+\begin{split}
+ &\min_{\textbf{Z}}  \beta \parallel \textbf{B}-\textbf{Z}\parallel^2_F+\gamma \parallel \textbf{Y}-\textbf{ZG}\parallel^2_F.\\
+\end{split} \end{equation}
+
+通过把公式\ref{cmheq7}对求导并取零，可以得到：
+\begin{equation}\label{cmheq8}
+\textbf{Z}=(\beta \textbf{B}+\gamma \textbf{YG}^\top )(\beta \textbf{I} +\gamma \textbf{GG}^\top)^{-1}.
+\end{equation}
+
+
+
+\subsubsection{$\textbf{G}$步骤}
+\esubsubsection{$\textbf{G}$ Step}
+
+此时，固定其他变量后，公式\ref{cmheq4}可以改写为关于$\textbf{G}$的子问题：
+\begin{equation}\label{cmheq9}
+\begin{split}
+ &\min_{\textbf{G}} \parallel \textbf{Y}-\textbf{ZG}\parallel^2_F.\\
+\end{split} \end{equation}
+
+上式是一个最小二乘问题，其有一个闭解如下：
+\begin{equation}\label{cmheq10}
+\textbf{G}=(\textbf{Z}^\top \textbf{Z})^{-1}\textbf{Z}^\top \textbf{Y}.
+\end{equation}
+
+
+
+\subsubsection{$\textbf{B}$步骤}
+\esubsubsection{$\textbf{B}$ Step}
+
+最后一个步骤是求解$\textbf{B}$的。同样，我们固定$\textbf{F}$，$\textbf{Z}$和$\textbf{G}$之后，原问题可以简化成如下的关于$\textbf{B}$ 的子问题：
+\begin{equation}\label{cmheq11}
+\begin{split}
+ &\max_{\textbf{B}} \quad  \alpha Tr(\textbf{B}^\top \textbf{F})+\beta Tr(\textbf{B}^\top \textbf{Z}),\\
+ &s.t. \ \ \  \textbf{B} \in \{-1,1\}^{n \times r}.
+\end{split}
+\end{equation}
+然后，我们可以得到$\textbf{B}$的最优解为：
+\begin{equation}\label{cmheq12}
+ \textbf{B}=sgn( \alpha \textbf{F}+\beta  \textbf{Z}).
+\end{equation}
+
+
+
+
+\subsection{样本外扩展}
+\esubsection{Out-of-Sample Extension}
+
+
+正如之前所说，SDMCH是采用了两步哈希的策略。通过优化目标函数，我们得到了第一步的结果，即求得了训练数据的哈希码$\textbf{B}$。 此时我们需要基于学到的哈希码和数据的原始特征来学习相应的哈希函数。
+
+在第二步的分类器的选择上，我们采用线性回归的方式。我们记第$t$个模态的哈希投影矩阵为$\textbf{W}^{t}$，则可以通过优化如下问题求出该投影矩阵：
+\begin{equation}
+\parallel \textbf{B}- \textbf{X}^t\textbf{W}^{t} \parallel^2_F + \theta \parallel \textbf{W}^{t}\parallel^2_F,
+\end{equation}
+其中，$\theta$是平衡系数，$\parallel \textbf{W}^{t}\parallel^2_F$是正则化项。进而，我们可以得到哈希投影的最优解：
+\begin{equation}
+\textbf{W}^t=({\textbf{X}^t}^\top\textbf{X}^t  + \theta \textbf{I})^{-1} {\textbf{X}^t}^\top \textbf{B} .
+\end{equation}
+
+当我们学到哈希函数之后，对于不在训练样本中的查询数据，记其第$t$个模态的特征为$\textbf{X}^t_{query}$，我们可以按照如下的方式计算其哈希码：
+\begin{equation}
+\textbf{B}_{query}=sgn(\textbf{X}^t_{query}\textbf{W}^t ).
+\end{equation}
+
+
+
+
+\section{实验描述和结果分析}
+\esection{Experiments}
+
+为了评价我们提出的SDMCH方法的效果，我们在多个常见数据集上进行了实验。并且把SDMCH方法和现有方法做了比较。
+
+\subsection{数据集}
+\esubsection{Datasets}
+
+\textbf{Wiki}\cite{rasiwasia2010new}：由$2866$个样本组成，每个样本的图片和文本都是成对的。该数据集是一个单标签数据集，且一共有$10$个不同类。每一个样本的图像模态均被一个$128$维的SIFT 特征表示；其文本模态由一个$10$ 维的主题向量表示。该数据集被分成一个包含$2173$数据的训练集和一个包含$693$个样本的测试集合。
+
+\textbf{MIRFlickr}\cite{huiskes2008mir}：包含了$25000$个从Flickr网站收集的样本，且每个样本都对应$24$个类别标签的至少一个。其中，每一个样本的图像模态被一个$150$维的边缘直方图表示；为了表示文本模态，对其对应的标记向量的索引做PCA 操作，从而得到一个$500$ 维的向量。我们随机抽取$25\%$的数据构成测试集，并把剩下的数据用作训练集。
+
+\textbf{NUS-WIDE数据集}\cite{chua2009nus}：共有$269648$个从Flickr网站收集的样本。共有$81$ 个类别标签，且每一个样本至少对应其中一个类别。遵照现有工作的实验设置\cite{zhou2014latent,lin2015semantics,xu2017learning}，我们选出其中包含样本数量最多的$10$ 各类别及其对应的$186577$个样本。对每一个样本，图片模态用一个$500$ 维的词袋SIFT特征向量表示；对其文本模态，由其二进制标记向量表示，对应着数据集上数量最多的前$1000$个标记。
+
+因为一些对比方法的计算消耗过大。我们分别从MIRFlickr和NUS-WIDE的训练集中抽取出$5000$和$10000$个样本来训练所有模型。
+
+
+\subsection{对比方法及实验细节}
+\esubsection{Baselines and Implementation Details}
+
+
+考虑到SDMCH模型是非深度模型，我们选取了10个同样是非深度的现有工作作为我们的对比方法。这些方法包括5个无监督方法：Inter-Media
+Hashing（IMH）\cite{song2013inter}、Latent Semantic Sparse Hashing（LSSH）\cite{zhou2014latent}、Collective Matrix Factorization
+Hashing（CMFH）\cite{ding2014collective}、Composite Correlation Quantization（CCQ）\cite{long2016composite}；以及5 个监督方法：Cross View Hashing（CVH）\cite{kumar2011learning}、Semantic Correlation Maximization（SCM-orth）\cite{zhang2014large}、Semantic Correlation Maximization （SCM-seq）\cite{zhang2014large}、Semantics Preserving Hashing（SePH-km）\cite{lin2015semantics}和Discrete Cross-Modal Hashing（DCH）\cite{xu2017learning}。这些对比方法的代码均已经开源。我们在运行这些代码的时候，遵照着原作者的建议去调整参数。且实验在多次不同的数据划分上进行，最后汇报多次实验的平均值。
+
+对于我们的SDMCH模型，其参数通过验证过程选取。$K=6$、$\lambda_1=0.3$、$\lambda_2=0.7$、$\alpha=0.3$、$\beta=5$, $\gamma=1000$、$\theta=1$。此外，优化算法中的迭代次数设为10。
+
+所有实验均进行多次，并且每次都随机采样训练和测试集。最终的实验结果是在多次实验的基础上取平均值得到。
+
+实验环境是一台服务器，该机器的相关信息如下：Intel(R) XEON(R) CPU E5-2650@2.30GHz，128GB内存。
+
+
+
+\subsection{评价指标}
+\esubsection{Evaluation Metrics}
+
+在实验中，我们进行两种跨模态检索任务：其一是用查询数据的图像模态去从候选数据集中找出相似的文本模态数据；其二是用查询数据的文本模态去检索数据集中相似的图像模态数据。我们分别把这两个检索任务记为Image-to-Text和Text-to-Image任务。
+
+依据领域内相关工作，我们采用三种被广泛使用的评价标准：均值平均精度（mean average precision MAP）、前N准确率曲线（top-N precision curves）和准确率-召回率曲线（precision recall curves）。对这三种标准来说，数值越大表明检索的效果越好。
+
+给定一个查询数据，平均精度（average precision AP）定义如下：
+\begin{equation}
+AP= \frac{1}{R}\sum_{r=1}^nPrecision(r)\delta(r)
+\end{equation}
+其中，$R$是该查询样本在待检索数据库（训练集）中真实近邻的数量，$n$是待检索数据库（训练集）的数据量，$Precision(r)$ 代表着前$r$ 个返回样本的准确度，当第$r$个返回样本是该查询样本的真实近邻的时候$\delta(r)$ 等于$1$，当第$r$个返回样本不是该查询样本的真实近邻的时候$\delta(r)$等于$0$。真实近邻的定义和前文中一致，即：如果返回的样本和查询样本对应的类别一致，该返回样本是查询样本的近邻，反之则不是近邻。把所有查询样本组成的查询集合（测试集）称为$Q$，均值平均精度即$Q$中所有样本的平均精度的均值：
+\begin{equation}
+MAP=\frac{1}{Q}\sum_{i=1}^Q AP_i.
+\end{equation}
+
+前N准确率曲线可以反映出准确率随着返回的样本数量变化的情况，该指标在检索领域是十分有效的。
+
+在进行检索的时候，会计算查询样本的哈希码和待检索数据库中所有样本哈希码的海明距离，通过变化海明半径，可以给出不同的返回样本。基于不同的海明半径，我们可以得到对应的精确度和召回率，从而得到准确率-召回率曲线。
+
+
+\subsection{结果比较}
+\esubsection{Comparison Results}
+
+\subsubsection{均值平均精度比较}
+\esubsubsection{MAP}
+
+\begin{table}[t]\small \center
+\caption{数据集Wiki上的MAP结果。位数相同情况下最好的实验结果被加粗显示。}\label{tablewiki}
+\begin{tabular}{ccccc|cccc}\hline
+ \multirow{2}{*}{Method}
+& \multicolumn{4}{c|}{Image-to-Text} &  \multicolumn{4}{c}{Text-to-Image}\\\cline{2-9}
+&32位 &64位 &96位 &128位  &32位 &64位 &96位 &128位\\\hline
+{CCQ}& 0.1680&	0.1682	&0.1685 &0.1683 &0.2518&	0.2508&	0.2543&	0.2542  \\
+{CMFH}& 0.2256&	0.2345	&0.2352	&0.2440	&0.5295&	0.5316&	0.5392&	0.5430 \\
+{CVH}&  0.1483	&0.1502	&0.1488	&0.1488	&0.1398&	0.1293&	0.1279&	0.1259 \\
+{DCH}& 0.3589	&0.3777	&0.3797	&0.3791	&0.7097& 	0.7216& 0.7212&	0.7141   \\
+{FSH}& 0.2386	&0.2566	&0.2514	&0.2653 &0.5037&	0.5228& 0.5188&	0.5329 \\
+{IMH}& 0.1637	&0.1655	&0.1684	&0.1688	&0.1400& 	0.1324& 0.1326&	0.1320   \\
+{LSSH}& 0.2109	&0.2095	&0.2102	&0.2024 &0.5220&	0.5284& 0.5301&	0.5332   \\
+{SCM-orth}& 0.1387	&0.1286	&0.1309	&0.1286&	0.1338&	0.1277& 	0.1255& 	0.1219 \\
+{SCM-seq}& 0.2410	&0.2437	&0.2501	&0.2541&	0.2459&	0.2480& 	0.2469& 	0.2530 \\
+{SePH-km}& 0.2820	&0.3076	&0.3030	&0.3137&    0.6451&	0.6662& 	0.6669& 	0.6706  \\
+{SDMCH}&\bf{0.3843}&\bf{0.3924}&\bf{0.4011}&\bf{0.4025}&\bf{0.7670}&\bf{0.7701}&\bf{0.7675}&\bf{0.7709} \\
+\hline\end{tabular}\end{table}
+
+\begin{table}[t]\small \center
+\caption{数据集MIRFlickr上的MAP结果。位数相同情况下最好的实验结果被加粗显示。}\label{tablemir}
+\begin{tabular}{ccccc|cccc}\hline
+ \multirow{2}{*}{Method}
+& \multicolumn{4}{c|}{Image-to-Text} &  \multicolumn{4}{c}{Text-to-Image}\\\cline{2-9}
+&32位 &64位 &96位 &128位  &32位 &64位 &96位 &128位\\\hline
+{CCQ}& 0.5746&	0.5751&	0.5740&	0.5749&	0.5986&	0.5996	&0.5989	&0.5998   \\
+{CMFH}&0.5719&	0.5718&	0.5731&	0.5729&	0.5665&	0.5665	&0.5670	&0.5663  \\
+{CVH}& 0.5699&	0.5673&	0.5657&	0.5648&	0.5699&	0.5674	&0.5663	&0.5658   \\
+{DCH}& 0.6847&	0.6782&	0.6864&	0.6938&	0.7601&	0.7665 	&0.7792 &0.7882   \\
+{FSH}& 0.5922&	0.6010&	0.6040&	0.6044&	0.5958&	0.6056 	&0.6100 &0.6168 \\
+{IMH}& 0.5686&	0.5677&	0.5660&	0.5659&	0.5687&	0.5672 	&0.5666 &0.5665   \\
+{LSSH}&0.5708&	0.5757&	0.5772&	0.5786&	0.5894&	0.5923 	&0.5928 &0.5929    \\
+{SCM-orth}&0.5765&	0.5723&	0.5676	&0.5689	&0.5736&	0.5670& 0.5656 	&0.5645  \\
+{SCM-seq}& 0.6357&	0.6473&	0.6504	&0.6526	&0.6214& 	0.6285& 0.6337 	&0.6358 \\
+{SePH-km}&0.6873&	0.6882&	0.6889	&0.6874	&0.7456& 	0.7476& 0.7492 	&0.7497  \\
+{SDMCH}&\bf{0.7089}&\bf{0.7210}&\bf{0.7258}&\bf{0.7262}&\bf{0.7832}&\bf{0.8102}&\bf{0.8171}&\bf{0.8169}  \\
+\hline\end{tabular}\end{table}
+
+
+\begin{table}[t]\small \center
+\caption{数据集NUS-WIDE上的MAP结果。位数相同情况下最好的实验结果被加粗显示。}\label{tablenus}
+\begin{tabular}{ccccc|cccc}\hline
+ \multirow{2}{*}{Method}
+& \multicolumn{4}{c|}{Image-to-Text} &  \multicolumn{4}{c}{Text-to-Image}\\\cline{2-9}
+&32位 &64位 &96位 &128位  &32位 &64位 &96位 &128位\\\hline
+{CCQ}&  0.3877&	0.3886	&0.3885	&0.3886	&0.5986	&0.5996	&0.5989	&0.5998   \\
+{CMFH}& 0.3477&	0.3416	&0.3412	&0.3370	&0.3505	&0.3437	&0.3441	&0.3400  \\
+{CVH}&  0.3557&	0.3502	&0.3479	&0.3467	&0.3552 &0.3509 &0.3489 &0.3479 \\
+{DCH}&  0.5985&	0.5886	&0.5759	&0.5775	&0.7303 &0.7162 &0.7065 &0.6914 \\
+{FSH}&  0.4371&	0.4534	&0.4613	&0.4680	&0.4522 &0.4696 &0.4836 &0.4916\\
+{IMH}&  0.3504&	0.3509	&0.3495	&0.3479	&0.3484 &0.3483 &0.3479 &0.3464 \\
+{LSSH}& 0.3879&	0.3927	&0.3913	&0.3912	&0.4211 &0.4221 &0.4184 &0.4162  \\
+{SCM-orth}& 0.3730&	0.3614&	0.3545&	0.3528	&0.3702 	&0.3591 	&0.3513&	0.3531\\
+{SCM-seq}& 0.5311&	0.5330&	0.5349&	0.5400	&0.5101 	&0.5159 	&0.5137&	0.5191\\
+{SePH-km}& 0.5440&	0.5449&	0.5760&	0.5510	&0.6358 	&0.6405 	&0.6774&	0.6391\\
+{SDMCH}&\bf{ 0.6235}&\bf{0.6393}&\bf{0.6414}&\bf{0.6437}&\bf{0.7462}&\bf{0.7659}&\bf{0.7715}&\bf{0.7706}\\
+\hline\end{tabular}\end{table}
+
+
+
+%\begin{table*}\tiny \centering\begin{tabular}{cc cccc cccc cccc}\toprule[1pt]
+%\multirow{2}{*}{Task}&\multirow{2}{*}{Method}&\multicolumn{4}{c}{Wiki}&\multicolumn{4}{c}{MIRFlickr}&\multicolumn{4}{c}{NUS-WIDE} \\\cmidrule(lr){3-6}
+%\cmidrule(lr){7-10}\cmidrule(lr){11-14}&&32bits&64bits&96bits&128bits&32bits&64bits&96bits&128bits&32bits&64bits&96bits&128bits\\ \hline
+%\multirow{8}{*}{\tabincell{c}{ Image\\-to-\\Text }}
+%&{CCQ}&{0.1680}&{0.1682}&{0.1685}&{0.1683}&{0.5746}&{0.5751}&{0.5740}&{0.5749}&{0.3877}&{0.3886}&{0.3885}&{0.3886}\\
+%&{CMFH}&{0.2256}&{0.2345}&{0.2352}&{0.2440}&{0.5719}&{0.5718}&{0.5731}&{0.5729}&{0.3477}&{0.3416}&{0.3412}&{0.3370}\\
+%&{CVH}&{0.1483}&{0.1502}&{0.1488}&{0.1488}&{0.5699}&{0.5673}&{0.5657}&{0.5648}&{0.3557}&{0.3502}&{0.3479}&{0.3467}\\
+%&{DCH}&{0.3589}&{0.3777}&{0.3797}&{0.3791}&{0.6847}&{0.6782}&{0.6864}&{0.6938}&{0.5985}&{0.5886}&{0.5759}&{0.5775}\\
+%&{FSH}&{0.2386}&{0.2566}&{0.2514}&{0.2653}&{0.5922}&{0.6010}&{0.6040}&{0.6044}&{0.4371}&{0.4534}&{0.4613}&{0.4680}\\
+%&{IMH}&{0.1637}&{0.1655}&{0.1684}&{0.1688}&{0.5686}&{0.5677}&{0.5660}&{0.5659}&{0.3504}&{0.3509}&{0.3495}&{0.3479}\\
+%&{LSSH}&{0.2109}&{0.2095}&{0.2102}&{0.2024}&{0.5708}&{0.5757}&{0.5772}&{0.5786}&{0.3879}&{0.3927}&{0.3913}&{0.3912}\\
+%&{SCM-orth}&{0.1387}&{0.1286}&{0.1309}&{0.1286}&{0.5765}&{0.5723}&{0.5676}&{0.5689}&{0.3730}&{0.3614}&{0.3545}&{0.3528}\\
+%&{SCM-seq}&{0.2410}&{0.2437}&{0.2501}&{0.2541}&{0.6357}&{0.6473}&{0.6504}&{0.6526}&{0.5311}&{0.5330}&{0.5349}&{0.5400}\\
+%&{SePH-km}&{0.2820}&{0.3076}&{0.3030}&{0.3137}&{0.6873}&{0.6882}&{0.6889}&{0.6874}&{0.5440}&{0.5449}&{0.5760}&{0.5510}\\
+%&{SDMCH}&\bf{0.3843}&\bf{0.3924}&\bf{0.4011}&\bf{0.4025}&\bf{0.7089}&\bf{0.7210}&\bf{0.7258}&\bf{0.7262}&\bf{0.6235}&\bf{0.6393}&\bf{0.6414}&\bf{0.6437}\\ \hline\multirow{8}{*}{\tabincell{c}{ Text\\-to-\\Image }}
+%&{CCQ}&{0.2518}&{0.2508}&{0.2543}&{0.2542}&{0.5986}&{0.5996} & {0.5989}&{0.5998}&{0.5986}&{0.5996}&{0.5989}&{0.5998}\\
+%&{CMFH}&{0.5295}&{0.5316}&{0.5392}&{0.5430}&{0.5665}&{0.5665}&{0.5670}&{0.5663}&{0.3505}&{0.3437}&{0.3441}&{0.3400}\\
+%&{CVH}&{0.1398}&{0.1293}&{0.1279}&{0.1259}&{0.5699}&{0.5674}&{0.5663}&{0.5658}&{0.3552}&{0.3509}&{0.3489}&{0.3479}\\
+%&{DCH}&{0.7097}&{0.7216}&{0.7212}&{0.7141}&{0.7601}&{0.7665}&{0.7792}&{0.7882}&{0.7303}&{0.7162}&{0.7065}&{0.6914}\\
+%&{FSH}&{0.5037}&{0.5228}&{0.5188}&{0.5329}&{0.5958}&{0.6056}&{0.6100}&{0.6168}&{0.4522}&{0.4696}&{0.4836}&{0.4916}\\
+%&{IMH}&{0.1400}&{0.1324}&{0.1326}&{0.1320}&{0.5687}&{0.5672}&{0.5666}&{0.5665}&{0.3484}&{0.3483}&{0.3479}&{0.3464}\\
+%&{LSSH}&{0.5220}&{0.5284}&{0.5301}&{0.5332}&{0.5894}&{0.5923}&{0.5928}&{0.5929}&{0.4211}&{0.4221}&{0.4184}&{0.4162}\\
+%&{SCM-orth}&{0.1338}&{0.1277}&{0.1255}&{0.1219}&{0.5736}&{0.5670}&{0.5656}&{0.5645}&{0.3702}&{0.3591}&{0.3513}&{0.3531}\\
+%&{SCM-seq}&{0.2459}&{0.2480}&{0.2469}&{0.2530}&{0.6214}&{0.6285}&{0.6337}&{0.6358}&{0.5101}&{0.5159}&{0.5137}&{0.5191}\\
+%&{SePH-km}&{0.6451}&{0.6662}&{0.6669}&{0.6706}&{0.7456}&{0.7476}&{0.7492}&{0.7497}&{0.6358}&{0.6405}&{0.6774}&{0.6391}\\
+%&{SDMCH}&\bf{0.7670}&\bf{0.7701}&\bf{0.7675}&\bf{0.7709}&\bf{0.7832}&\bf{0.8102}&\bf{0.8171}&\bf{0.8169}&\bf{0.7462}&\bf{0.7659}&\bf{0.7715}&\bf{0.7706}\\
+%\toprule[1pt]\end{tabular}
+%\caption{The MAP results of all methods on three datasets. The best MAPs for each category are shown in boldface.}\label{tableMAP}\end{table*}
+
+我们的模型和其他对比方法在Wiki，MIRFlickr和NUS-WIDE数据集上的的MAP结果分别列在表\ref{tablewiki}，表\ref{tablemir} 和表\ref{tablenus} 中。
+
+从这些实验结果中，我们有如下的发现：
+\begin{itemize}
+\item 我们的SDMCH方法在所有情况都可以取得最佳的实验结果，并在某些情况下可以带来很明显的效果提升。这表明了我们的方法在这些数据集上的有效性。
+\item 所有的方法在Text-to-Image检索任务上的准确度都比其在Image-to-Text任务上的准确度要高。一个可能的解释是，文本模态比图像模态能更好地表述该样本。
+\item 部分监督方法，如DCH、SePH-km和SDMCH，比无监督方法的效果要好。这表明了充分利用语义信息的有效性。
+\end{itemize}
+
+
+
+
+
+
+\subsubsection{前N准确率曲线比较}
+\esubsubsection{Top-N Precision Curves}
+
+
+\begin{figure*}[t]\centering
+\begin{minipage}[t]{0.32\linewidth}  \centering
+  \centerline{\includegraphics[width=5.4cm]{Images/chap5/WIKI/Precision_Image_VS_Text_64}}\end{minipage}
+\begin{minipage}[t]{0.32\linewidth}  \centering
+  \centerline{\includegraphics[width=5.4cm]{Images/chap5/MIR/Precision_Image_VS_Text_64}}\end{minipage}
+\begin{minipage}[t]{0.32\linewidth}  \centering
+  \centerline{\includegraphics[width=5.4cm]{Images/chap5/NUS/Precision_Image_VS_Text_64}}\end{minipage}\\
+\begin{minipage}[t]{0.32\linewidth}  \centering
+  \centerline{\includegraphics[width=5.4cm]{Images/chap5/WIKI/Precision_Image_VS_Text_128}}\end{minipage}
+\begin{minipage}[t]{0.32\linewidth}  \centering
+  \centerline{\includegraphics[width=5.4cm]{Images/chap5/MIR/Precision_Image_VS_Text_128}}\end{minipage}
+\begin{minipage}[t]{0.32\linewidth}  \centering
+  \centerline{\includegraphics[width=5.4cm]{Images/chap5/NUS/Precision_Image_VS_Text_128}}\end{minipage}\\
+\begin{minipage}[t]{0.32\linewidth}  \centering
+  \centerline{\includegraphics[width=5.4cm]{Images/chap5/WIKI/Precision_Text_VS_Image_64}}\end{minipage}
+\begin{minipage}[t]{0.32\linewidth}  \centering
+  \centerline{\includegraphics[width=5.4cm]{Images/chap5/MIR/Precision_Text_VS_Image_64}}\end{minipage}
+\begin{minipage}[t]{0.32\linewidth}  \centering
+  \centerline{\includegraphics[width=5.4cm]{Images/chap5/NUS/Precision_Text_VS_Image_64}}\end{minipage}\\
+\begin{minipage}[t]{0.32\linewidth}  \centering
+  \centerline{\includegraphics[width=5.4cm]{Images/chap5/WIKI/Precision_Text_VS_Image_128}}\end{minipage}
+\begin{minipage}[t]{0.32\linewidth}  \centering
+  \centerline{\includegraphics[width=5.4cm]{Images/chap5/MIR/Precision_Text_VS_Image_128}}\end{minipage}
+\begin{minipage}[t]{0.32\linewidth}  \centering
+  \centerline{\includegraphics[width=5.4cm]{Images/chap5/NUS/Precision_Text_VS_Image_128}}\end{minipage}
+\caption{所有方法在三个数据集上的前N准确率曲线，其中哈希码位数为64和128位。}
+\label{figurePN}\end{figure*}
+
+
+
+
+我们进一步观察和分析SDMCH模型和其他对比方法在三个数据集上的前N准确率曲线。从图\ref{figurePN}中我们可以发现：
+\begin{itemize}
+\item 我们提出的方法比对比方法要有更好的实验结果，这说明了SDMCH的有效性。
+\item SDMCH、DCH、SePH-km、SCM-seq和FSH这几个方法在效果上比其他方法要好。
+\item 在NUS-WIDE数据集上。实验结果与在前两个数据集上的结果一致：我们的一步哈希和两步哈希方法均比对应的一步哈希和两步哈希对比方法更好。
+\item 部分监督方法，如DCH、SePH-km和SDMCH，比无监督方法的效果要好。这个现象和均值平均精度的结果一致。
+\end{itemize}
+
+
+
+\subsubsection{准确率-召回率曲线比较}
+\esubsubsection{Precision-Recall Curves}
+
+\begin{figure*}[t]\centering
+\begin{minipage}[t]{0.32\linewidth}  \centering
+  \centerline{\includegraphics[width=5.4cm]{Images/chap5/WIKI/P_R_Image-to-Text_64}}\end{minipage}
+\begin{minipage}[t]{0.32\linewidth}  \centering
+  \centerline{\includegraphics[width=5.4cm]{Images/chap5/MIR/P_R_Image-to-Text_64}}\end{minipage}
+\begin{minipage}[t]{0.32\linewidth}  \centering
+  \centerline{\includegraphics[width=5.4cm]{Images/chap5/NUS/P_R_Image-to-Text_64}}\end{minipage}\\
+\begin{minipage}[t]{0.32\linewidth}  \centering
+  \centerline{\includegraphics[width=5.4cm]{Images/chap5/WIKI/P_R_Image-to-Text_128}}\end{minipage}
+\begin{minipage}[t]{0.32\linewidth}  \centering
+  \centerline{\includegraphics[width=5.4cm]{Images/chap5/MIR/P_R_Image-to-Text_128}}\end{minipage}
+\begin{minipage}[t]{0.32\linewidth}  \centering
+  \centerline{\includegraphics[width=5.4cm]{Images/chap5/NUS/P_R_Image-to-Text_128}}\end{minipage}\\
+\begin{minipage}[t]{0.32\linewidth}  \centering
+  \centerline{\includegraphics[width=5.4cm]{Images/chap5/WIKI/P_R_Text-to-Image_64}}\end{minipage}
+\begin{minipage}[t]{0.32\linewidth}  \centering
+  \centerline{\includegraphics[width=5.4cm]{Images/chap5/MIR/P_R_Text-to-Image_64}}\end{minipage}
+\begin{minipage}[t]{0.32\linewidth}  \centering
+  \centerline{\includegraphics[width=5.4cm]{Images/chap5/NUS/P_R_Text-to-Image_64}}\end{minipage}\\
+\begin{minipage}[t]{0.32\linewidth}  \centering
+  \centerline{\includegraphics[width=5.4cm]{Images/chap5/WIKI/P_R_Text-to-Image_128}}\end{minipage}
+\begin{minipage}[t]{0.32\linewidth}  \centering
+  \centerline{\includegraphics[width=5.4cm]{Images/chap5/MIR/P_R_Text-to-Image_128}}\end{minipage}
+\begin{minipage}[t]{0.32\linewidth}  \centering
+  \centerline{\includegraphics[width=5.4cm]{Images/chap5/NUS/P_R_Text-to-Image_128}}\end{minipage}
+\caption{所有方法在三个数据集上的准确率-召回率曲线，其中哈希码位数为64和128位。}
+\label{figurePR}\end{figure*}
+
+
+我们在三个数据集上画出了准确率-召回率曲线，分别对应于64位和128位哈希码的情况。实验曲线图为图\ref{figurePR}，准确率- 召回率曲线的结果和前N准确率曲线类似的实验结果基本一致。SDMCH仍然是最佳的方法，且监督方法依旧比无监督方法的结果要好。
+
+从上述的实验中我们可以看出，SDMCH在三个数据集的实验中，其三种评价标准的指标均高于其他对比方法。这样的结果恰好说明了保持流形结构信息和语义信息的重要性。同时也证明了SDMCH方法的损失函数及其优化算法的有效性。
+
+
+
+\subsection{收敛性}
+\esubsection{Convergence}
+
+
+\begin{figure}
+\center
+  \includegraphics[width=1\linewidth]{Images/chap5/MIR/convergence}
+\caption{SDMCH在三个数据集上的收敛性曲线，哈希码位数为128位。}
+\label{itreation1}\end{figure}
+
+
+为了验证我们提出的方法是可以收敛的，我们画出了目标函数的值随迭代次数变化的图\ref{itreation1}。为了更直观的展现函数值的变化趋势，我们把所有的函数值均除以最大的函数值，从而画出得到的相对数值。
+
+从图中我们可以发现，在三个数据集上，SDMCH均可以在很少的迭代步数后收敛。这样的结果表明了我们方法损失函数及其优化算法的有效性。
+
+
+
+\subsection{训练时间比较}
+\esubsection{Time Cost Analysis}
+
+\begin{table}[t]\centering%\scriptsize
+\caption{数据集MIRFlickr上的训练时间，单位：秒。}
+{\begin{tabular}{crrrr}\hline
+{Method}    & 32位 & 64位 & 96位  & 128位 \\\hline
+{CCQ}&{3.96}&{10.99}&{18.79}&{43.44}\\
+{CMFH}&{0.12}&{0.14}&{0.17}&{0.19}\\
+{CVH}&{0.06}&{0.05}&{0.05}&{0.05}\\
+{DCH}&{10.21}&{32.37}&{69.81}&{115.16}\\
+{FSH}&{9.59}&{10.94}&{12.61}&{12.43}\\
+{IMH}&{13.32}&{13.22}&{13.56}&{13.44}\\
+{LSSH}&{9.71}&{10.50}&{11.73}&{12.80}\\
+{SCM-orth}&{0.04}&{0.04}&{0.04}&{0.04}\\
+{SCM-seq}&{0.38}&{0.78}&{1.22}&{1.55}\\
+{SePH-km}&{398.09}&{434.22}&{614.01}&{713.53}\\
+{SDMCH}&{9.15}&{9.25}&{9.50}&{9.66}\\\hline
+\end{tabular}}
+\label{tableTIME}\end{table}
+
+
+求解公式\ref{cmheq8}、公式\ref{cmheq10}和公式\ref{cmheq12}的时间复杂度分别是：$O(nr+ncr+r^2+r^2c+r^3+nr^2)$ 、$O(nr^2+r^3+nrc+nr^2)$ 和$O(nr+nr)$。因为$c$和$r$均远小于$n$，所以这些步骤的时间复杂度是与训练数据的多少成线性相关。此外，因为我们可以预先计算常量$\textbf{A}$，且$\textbf{A}$是一个稀疏的矩阵，所以计算公式\ref{cmheq6} 也是十分高效的。
+
+为了验证SDMCH的效率，我们在MIRFlickr数据集上对比了所有方法的训练时间，并把结果列在表\ref{tableTIME}中。从中我们可以发现：
+\begin{itemize}
+\item 一些对比方法的训练时间会随着哈希码位数的增加而变长，如CCQ，SePH-km和DCH。而SDMCH的训练时间不会随着哈希码位数的增加而有显著变化。
+\item 一些对比方法的训练时间很短，如CMFH，CVH和SCM-seq。但是从之前的结果中可以知道，他们的准确度比SDMCH 要差很多。
+\item 从之前的结果中可知，DCH的准确度与SDMCH的准确度是可以比较的。但是，我们可以发现DCH 需要的训练时间比SDMCH要长的多。尤其是当哈希码位数很大的时候。
+\end{itemize}
+因此，从准确度和训练效率这两方面一起考虑，我们可以得出结论：SDMCH比其它的对比方法更实用。
+
+
+
+
+
+\section{小结}
+\esection{Summary}
+
+在本章中，我们提出一种新型的跨模态哈希学习模型，并把它命名为监督的流形嵌入离散跨模态哈希学习方法。通过保持由流形学习技术构建的相似性信息，我们的方法可以充分利用数据的非线性流形结构来提高检索的效果。我们的方法同时也可以构建不同模态间的关联，这样的关联在存在多个模态的情景中十分重要。此外，我们的方法还可以利用监督信息，加入了监督信息使得我们可以学出更加准确的哈希码。在哈希码求解的过程中，我们采用了离散优化的策略，从而避免了较大的量化误差。
+
+我们在三个常用的数据集上进行了大量的实验。实验结果表明我们提出的方法在跨模态媒体检索任务中比其它对比方法都要好。
+
+
+
+%\cleardoublepage

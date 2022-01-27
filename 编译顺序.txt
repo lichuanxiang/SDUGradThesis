@@ -1,0 +1,9 @@
+首先使用PdfTexify编译GradThesis.tex，生成pdf；
+
+然后使用gbk2uni对gradthesis.out文件进行转码；
+
+gbk2uni.exe gradthesis.out
+
+最后执行PdfLatex一次即可。
+
+若要修改参考文献格式，可直接在生成的bbl文件中修改，然后使用texworks的PdfLatex按钮进行编译。

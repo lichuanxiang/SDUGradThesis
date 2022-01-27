@@ -1,0 +1,688 @@
+\chapter{\quad\quad 快速可扩展监督哈希方法}
+\label{chap4}
+\echapter{Fast Scalable Supervised Hashing}
+
+
+我们在上一章提出了一种有效的监督哈希方法，该方法引入了一个中间项来规避直接使用数据量平方大小的样本间成对相似性矩阵。尽管这个中间项的大小远小于样本间成对相似性矩阵，但是其大小仍是与数据量线性相关的，当数据很大的时候，仍会有很高的消耗。此外，上一章的方法还存在两个缺陷。其一，SSDH使用了按位优化的策略来学习哈希码，会造成训练时间消耗相对过大。其二，在哈希码学习的过程中，SSDH忽略了原始数据的特征信息，仅能使用监督信息指导哈希码的生成。
+
+我们在本章提出了一种名为快速可扩展监督哈希的新方法，其英文名为Fast Scalable Supervised Hashing（简写为FSSH）。该方法同样引入了一个中间项，这个中间项的大小远小于样本间成对相似性矩阵，且与数据量无关，只与类别数及特征的维数有关。因此，该方法可以更好地减小空间消耗及优化复杂度。此外，我们采用了一步优化所有位哈希码的离散优化算法，可以准确并高效地完成哈希码的更新。并且在哈希码学习的过程中，同时考虑了监督信息和数据的原始特征信息，进而保证了哈希码的准确性。通过在常用数据集上的实验，我们可以发现该方法优于现有的监督哈希方法。除此之外，实验及理论分析均显示，本章的方法优于前一章提出的方法。
+
+
+
+
+
+
+
+\section{引言}
+\esection{Introduction}
+
+现有很多工作均表明，监督哈希学习的效果会比无监督哈希学习好很多\cite{da2017amvh,kang2016column,wang2016deep}。我们在本章中研究的便是一种监督哈希模型。
+
+在现有方法中，监督哈希模型的范式有多种，但其中被使用最多的目标函数如下：
+\begin{equation}\label{fssheq1}
+\begin{split}
+   &  \min_\textbf{B}\parallel r \textbf{S}  -\textbf{B} \textbf{B}^\top   \parallel_F^2,\\
+   & s.t. \ \ \ \textbf{B}\in\{-1,1\}^{n\times r},
+\end{split}
+\end{equation}
+其中，$\parallel \cdot \parallel_F$是Frobenius范数，标量$r$是哈希码的位数，$\textbf{S}\in\{-1,1\}^{n\times n}$ 是样本之间成对的语义相似性矩阵（$\textbf{S}_{ij}=1$意味着样本和样本在语义上是相似的，反之$\textbf{S}_{ij}=-1$），$\textbf{B}$是包含$n$ 个样本哈希码的矩阵。
+
+公式\ref{fssheq1}是一个离散优化问题，这类问题是难解的。一些现有工作\cite{lin2013general,liu2012supervised} 在面对这个问题的时候，采取的方式如下：先把哈希码的离散约束条件松弛成非离散，从而可以求解一个连续的问题得到一个解，最后把这个解量化成离散的哈希码。近期的一些工作\cite{lin2014fast,kang2016column,luo2018scalable}尝试着直接离散地求解公式\ref{fssheq1}，并在实验中表明：这些方法比那些先松弛再求解的方法会有很多的效果提升。美中不足的是，这些方法都采用的是按位求解哈希码的策略，也就是说，他们先求完前一位哈希码才能继续求解下一位的哈希码。而当哈希码的位数很多的时候，这些方法求解的速度则会大大增加。此外，因为公式\ref{fssheq1}中的成对的相似性矩阵的大小是$n \times n$ 的，所以如果直接使用$\textbf{S}$会导致$O(n^2)$ 的时间复杂度和空间复杂度。为了避免这么大的开销，一些方法在训练的时候人为地采样出部分数据去训练，这种处理方式会造成信息的损失，从而影响最终的结果。另有一些方法采用了列采样的策略，比如LFH\cite{zhang2014supervised}和COSDISH\cite{kang2016column}。他们可以利用所有的训练数据，并且效果比前一种方法好很多。但是在论文\cite{zhang2014supervised} 的实验结果中，我们仍能发现，列采样会造成一定的效果下降。SSDH\cite{luo2018scalable}方法尝试着把成对的相似性矩阵$\textbf{S}$嵌入到一个低维空间的矩阵中去，这个矩阵的大小是$n \times c$ 的（其中，$c$是类别数量，且$c$远小于$n$）。不过，其大小仍与训练样本数$n$ 有关，且当$n$ 很大的时候，其复杂度仍会很高。不少采用公式\ref{fssheq1} 或类似损失函数的哈希方法\cite{zhang2014supervised,kang2016column,luo2018scalable}，其在生成哈希码的时候仅考虑了类别信息，而忽视了数据的特征。
+
+为了解决上述现有方法的局限，需要从三个方面去求解公式\ref{fssheq1}。其一，我们需要高效地利用所有的训练数据，避免仅使用部分数据所造成的信息损失。其二，我们需要设计离散的优化算法，并且这个算法应避免使用按位优化策略。其三，在监督哈希码的生成的时候，我们应不仅考虑类别信息，而且要考虑数据本身的特征信息。
+
+我们在本章提出了一种新颖的监督哈希模型，命名为快速可扩展监督哈希方法，英文名为Fast Scalable Supervised Hashing，以下简称为FSSH。
+
+
+
+\section{相关方法概述}
+\esection{Related Work}
+
+\subsection{两步哈希}
+\esubsection{Two-Step Hashing}
+
+本章中我们的方法有多个变体，既有采用一步哈希策略的变体，也有采用两步哈希策略设计的变体。而不论哪种变体，我们方法的核心仍在于第一步的损失函数的设计以及对应的优化算法。
+
+关于两步哈希的相关介绍，请参考章节\ref{chap-tsh}。
+
+\subsection{可扩展监督离散哈希}
+\esubsection{Scalable Supervised Discrete Hashing}
+
+与本章方法最相关的一个现有哈希方法是可扩展监督离散哈希方法（Scalable Supervised Discrete Hashing，简写为SSDH）。关于SSDH 的详细算法请参考第\ref{chap3}章。
+
+尽管SSDH的设计初衷与FSSH的初衷有部分重叠，即减小$n \times n$的样本间成对相似性矩阵造成的巨大消耗，以及离散的优化哈希码。但是我们在此要强调SSDH 的三个不足：1）SSDH将$n \times n$的样本间成对相似性矩阵嵌入到一个中间项中，但是这个中间项的大小仍与数据量有关，当数据量很大的时候，该项仍需要很大的空间。2）SSDH采用的是按位优化哈希码的策略，这样的策略通常很耗时。3）在哈希码生成的过程中，SSDH仅使用了监督（类别）信息，而不能充分考虑到数据本身。
+
+而本章中的FSSH方法相对于SSDH有三点优势：1）虽然同样是把$n \times n$的样本间成对相似性矩阵嵌入到一个中间项中，FSSH 得到的中间项的大小是与数据量无关的，即该中间项比SSDH的中间项要小的多。2）FSSH采用了一步优化哈希码所有位的策略，该策略在时间消耗上要优于SSDH 的按位优化策略。3）FSSH方法在学习哈希码的时候，既考虑了监督（类别）信息，又可以充分利用媒体数据本身。
+
+
+
+
+\section{快速可扩展监督哈希方法}
+\esection{Fast Scalable Supervised Hashing}
+
+\subsection{符号和问题描述}
+\esubsection{Notations and Problem Definition}
+
+给定$n$个样本$\textbf{X}=[\textbf{x}_1, \textbf{x}_2, \cdots, \textbf{x}_n] \in\mathbb{R}^{n\times d}$，哈希模型的目标是在保持原空间的相似性的前提下学出这些样本的$r$位哈希码；其中，$\textbf{b}_i$是样本$\textbf{x}_i$ 对应的哈希码，$d$是特征的维数。不失一般性，我们假设存在标签矩阵包含了所有样本的标签$\textbf{L}=[\textbf{l}_1, \textbf{l}_2, \cdots, \textbf{l}_n]\in\{0,1\}^{n\times c}$；其中，$c$是类别的数量，$\textbf{l}_{ik}$是$\textbf{l}_i$的第$k$位元素，且如果样本属于类别$k$的话，则$\textbf{l}_{ik}=1$，反之$\textbf{l}_{ik}=0$。 此外，$\textbf{S}$ 是样本之间成对的语义相似性矩阵；其中，$\textbf{S}_{ij}=1$意味着样本$i$和样本$j$在语义上是相似的，如果两者不相似则有${S}_{ij}=-1$。 和现有的相关方法一致，我们假设成立$\sum^n_{i=1} \textbf{x}_i=0$。
+
+因为核化可以更好的捕捉原始特征中的非线性结构，因此这项技术在哈希研究领域得到了广泛的应用\cite{da2017amvh,gui2018fast,huang2016class,liu2012supervised,shen2015supervised}。 我们在这里使用RBF核函数。具体地的，我们随机抽取$m$个点作为锚点，${\textbf{o}_1, \textbf{o}_2, \cdots, \textbf{o}_m}$。通过核函数$\phi(\textbf{x})=[exp(\frac{-\parallel \textbf{x}-\textbf{o}_1 \parallel_2^{2}}{2\sigma^{2}}),\cdots ,exp(\frac{-\parallel \textbf{x}-\textbf{o}_m \parallel_2^{2}}{2\sigma^{2}})]^\top$可以把每一个数据样本映射成$m$ 维的核特征。这里的$\sigma$是通过对训练样本之间的欧式距离取均值得到的。
+
+
+
+
+\subsection{目标函数}
+\esubsection{Objective Function}
+
+\subsubsection{核特征映射}
+\esubsubsection{Kernel Features Mapping}
+
+哈希函数的作用是把数据从原始特征转换成哈希码，我们可以把哈希函数写成如下形式：
+\begin{equation}\label{fssheq2}
+ F(\textbf{X})=sgn(\phi(\textbf{X})\textbf{W})=\textbf{B}
+\end{equation}	
+其中，$\textbf{W}\in \mathbb{R}^{m\times r}$是一个把原矩阵转变到$r$维实值空间的投影矩阵，$sgn(\cdot)$是符号函数（定义为：在$x\geq 0$ 时$sgn(x)=1$；在$x<0$时$sgn(x)=-1$）。进而，我们可以通过如下的式子来度量核特征映射的质量：
+\begin{equation}\label{fssheq3}
+\begin{split}
+   &  \min_{\textbf{W}}\parallel \textbf{B}  -\phi(\textbf{X})\textbf{W}   \parallel_F^2,\\
+   & s.t. \ \ \ \textbf{B}\in\{-1,1\}^{n\times r}.
+\end{split}
+\end{equation}	
+此外，现有工作\cite{gordo2014asymmetric,da2017amvh}表明：若把公式\ref{fssheq1}中的哈希码换为实值的信息，可以更好地近似成对相似性矩阵。因此，为了在学习哈希码的过程中能更好地利用相似性信息，我们用实值的$\phi(\textbf{X})\textbf{W}$ 来替换其中一个$\textbf{B}$：
+\begin{equation}\label{fssheq4}
+\begin{split}
+  &  \min_{\textbf{B},\textbf{W}}\parallel  \textbf{S}  -\big(\phi(\textbf{X})\textbf{W}\big) \textbf{B}^\top   \parallel_F^2,\\
+   & s.t. \ \ \ \textbf{B}\in\{-1,1\}^{n\times r}.
+\end{split}
+\end{equation}
+把公式\ref{fssheq3}和公式\ref{fssheq4}放在一起，我们得到：
+\begin{equation}\label{fssheq5}
+\begin{split}
+   &  \min_{\textbf{B},\textbf{W}} \parallel  \textbf{S}  -\big(\phi(\textbf{X})\textbf{W}\big) \textbf{B}^\top   \parallel_F^2+\mu \parallel \textbf{B}  -\phi(\textbf{X})\textbf{W}   \parallel_F^2\\
+   & s.t. \ \ \ \textbf{B}\in\{-1,1\}^{n\times r},
+\end{split}
+\end{equation}	
+其中，$\mu$是参数。
+
+\subsubsection{类别矩阵嵌入}
+\esubsubsection{Label Matrix Embedding}
+
+虽然成对相似性矩阵$\textbf{S}$和类别矩阵$\textbf{L}$都含有语义信息，并且成对相似性矩阵可以由后者计算得到，但是类别矩阵仍含有很多有用的信息。假设存在三个样本，并且他们对应的类别标签为$\textbf{l}_1=[1,0,0]$、$\textbf{l}_2=[1,1,1]$ 和$\textbf{l}_3=[1,1,1]$。在成对相似性矩阵$\textbf{S}$ 中有${S}_{13}={S}_{23}=1$，而样本1与样本2之间相似程度小于样本1和样本3的事实却无法被反应。因此，我们希望在哈希码学习过程中还能够考虑到类别矩阵$\textbf{L}$。我们假设：通过乘以一个变换矩阵$\textbf{G}\in \mathbb{R}^{c\times r}$，类别矩阵可以被投影到哈希码空间并拟合哈希码。得到如下式子：
+\begin{equation}\label{fssheq6}
+\begin{split}
+   &  \min_{\textbf{B},\textbf{G}}\parallel \textbf{B}  -\textbf{LG}   \parallel_F^2,\\
+   & s.t. \ \ \ \textbf{B}\in\{-1,1\}^{n\times r}.
+\end{split}
+\end{equation}
+
+\subsubsection{最终目标函数}
+\esubsubsection{Overall Objective Function}
+
+
+将公式\ref{fssheq5}和公式\ref{fssheq6}结合，并把另外一个$\textbf{B}$替代，最终目标函数如下：
+\begin{equation}\label{fssheq7}
+\begin{split}
+   &  \min_{\textbf{B},\textbf{G},\textbf{W}}\parallel \textbf{S}-\big(\phi(\textbf{X})\textbf{W}\big)(\textbf{LG})^\top\parallel_F^2\\
+   & +\mu\parallel \textbf{B}-\textbf{LG}\parallel_F^2 +\theta \parallel \textbf{B}-(\phi(\textbf{X})\textbf{W})\parallel_F^2,\\
+   & s.t. \ \ \ \textbf{B}\in\{-1,1\}^{n\times r},
+\end{split}
+\end{equation}	
+其中，$\mu$和$\theta$都是参数。
+
+公式\ref{fssheq7}包含了两种语义信息，成对相似性矩阵和类别矩阵，这使得学到的哈希码可以更好的保持原有的语义相似性。值得注意的是，虽然上式中包含了矩阵$\textbf{S}$，这并不意味着它会被直接使用。我们将会在随后的章节中详细描述，如何通过引入一个可预先计算的中间项，进而达到在优化中避免直接使用$n\times n$的成对相似性矩阵。
+
+
+
+\subsection{优化算法}
+\esubsection{Optimization}
+
+为了优化公式\ref{fssheq7}，我们设计了一个迭代优化算法，这个算法的每一步迭代均包含三个步骤。这三个步骤分别称为$\textbf{W}$ 步骤，$\textbf{G}$ 步骤和$\textbf{B}$步骤；且每个步骤中，另外两个变量被固定，只更新当前变量。
+
+
+\subsubsection{$\textbf{W}$步骤}
+\esubsubsection{$\textbf{W}$ Step}
+
+在这个步骤中，我们固定变量$\textbf{G}$和$\textbf{B}$，公式\ref{fssheq7}可简化为：
+\begin{equation}\label{fssheq8}
+  \min_{\textbf{W}}\parallel \textbf{S}-\big(\phi(\textbf{X})\textbf{W}\big)(\textbf{LG})^\top\parallel_F^2 +\theta \parallel \textbf{B}-\phi(\textbf{X})\textbf{W}\parallel_F^2.
+\end{equation}
+通过对此式关于$\textbf{W}$求导并取0，我们可以得到该式子的一个闭解：
+\begin{equation}\label{fssheq9}
+\begin{split}
+& \ \ \ \textbf{W}=\big(\phi(\textbf{X})^\top \phi(\textbf{X})\big)^{-1}\\
+&\big(\phi(\textbf{X})^\top \textbf{SLG} + \theta \phi(\textbf{X})^\top \textbf{B}\big)(\textbf{G}^\top \textbf{L}^\top \textbf{LG} +\theta \textbf{I}_{r\times r})^{-1},
+\end{split}
+\end{equation}
+进一步，我们令$\textbf{A}=\phi(\textbf{X})^\top \textbf{SL}$、$\textbf{C}=\phi(\textbf{X})^\top \phi(\textbf{X})$ 且$\textbf{D}=\textbf{L}^\top \textbf{L}$，则上式可以改写为：
+\begin{equation}\label{fssheq10}
+\begin{split}
+& \ \ \ \textbf{W} =\textbf{C}^{-1}\big(\textbf{AG} + \theta \phi(\textbf{X})^\top \textbf{B}\big)(\textbf{G}^\top \textbf{D} \textbf{G} +\theta \textbf{I}_{r\times r})^{-1},
+\end{split}
+\end{equation}
+我们可以注意到，$\textbf{C}$和$\textbf{D}$均为常数项，可以在优化之前计算好，无需在每次迭代中重新计算。
+
+在这里，我们引入了一个中间项$\textbf{A}\in \mathbb{R}^{m\times c}$。显然，该项也是一个常数项，且可以在优化前计算好，在优化过程中直接使用。并且该项包含了成对相似性矩阵，在优化时直接使用$\textbf{A}$ 可以避免直接使用$\textbf{S}$，进而避免了$O(n^2)$的复杂度。
+
+
+\subsubsection{$\textbf{G}$步骤}
+\esubsubsection{$\textbf{G}$ Step}
+
+每次迭代中的第二步为求解变量$\textbf{G}$的步骤。固定变量$\textbf{W}$和$\textbf{B}$，公式\ref{fssheq7}可写为关于$\textbf{G}$的目标函数：
+\begin{equation}\label{fssheq11}
+  \min_{\textbf{G}} \parallel \textbf{S}-\big(\phi(\textbf{X})\textbf{W}\big)(\textbf{LG})^\top\parallel_F^2 +\mu\parallel \textbf{B}-\textbf{LG}\parallel_F^2.
+\end{equation}
+同样的，上式对求$\textbf{G}$导并取零，我们可以获得一个解：
+\begin{equation}\label{fssheq12}
+\begin{split}
+&\ \ \ \textbf{G}=(\textbf{L}^\top \textbf{L})^{-1}\\
+& \big(\mu \textbf{L}^\top \textbf{B}+ \textbf{L}^\top \textbf{S}^\top \phi(\textbf{X})\textbf{W}\big)\big(\textbf{W}^\top \phi(\textbf{X})^\top \phi(\textbf{X})\textbf{W} +\mu \textbf{I}_{r\times r}\big)^{-1}. \\
+\end{split}
+\end{equation}
+我们可以发现，常数项$\textbf{A}$，$\textbf{C}$和$\textbf{D}$存在于该式，进而得到：
+\begin{equation}\label{fssheq13}
+\begin{split}
+&\ \ \ \textbf{G} =\textbf{D}^{-1}(\mu \textbf{L}^\top \textbf{B}+ \textbf{A}^\top \textbf{W})(\textbf{W}^\top \textbf{CW} +\mu \textbf{I}_{r\times r})^{-1}.\\
+\end{split}
+\end{equation}
+
+\subsubsection{$\textbf{B}$步骤}
+\esubsubsection{$\textbf{B}$ Step}
+
+第三步是求解$\textbf{B}$，此时我们固定住其他变量，得到如下的问题：
+\begin{equation}\label{fssheq14}
+\begin{split}
+   &  \min_{\textbf{B}} \ \mu\parallel \textbf{B}-\textbf{LG}\parallel_F^2 +\theta \parallel \textbf{B}-\phi(\textbf{X})\textbf{W}\parallel_F^2,\\
+   & s.t. \ \ \ \textbf{B}\in\{-1,1\}^{n\times r}.
+\end{split}
+\end{equation}
+然后，我们可以把上式展开成迹的形式，如下：
+\begin{equation}\label{fssheq15}
+\begin{split}
+   &  \min_{\textbf{B}} \ \mu Tr \Big( (\textbf{B}-\textbf{LG})^\top (\textbf{B}-\textbf{LG})\Big)\\
+   & \quad \quad +\theta Tr\Big(\big(\textbf{B}-\phi(\textbf{X})\textbf{W}\big)^\top\big(\textbf{B}-\phi(\textbf{X})\textbf{W}\big)\Big),\\
+   & = (\mu +\theta )\parallel \textbf{B}\parallel^2_F -2\mu Tr(\textbf{B}^\top \textbf{LG})\\
+   & +\mu \parallel \textbf{LG}\parallel^2_F -2\theta Tr\big(\textbf{B}^\top \phi(\textbf{X})\textbf{W}\big) +\theta\parallel \phi(\textbf{X})\textbf{W}\parallel^2_F,\\
+   & s.t. \ \ \ \textbf{B}\in\{-1,1\}^{n\times r},
+\end{split}
+\end{equation}
+其中，$Tr(\cdot)$是矩阵的迹。因为$\parallel \textbf{B}\parallel^2_F$、$\parallel \textbf{LG}\parallel^2_F$ 和$\parallel \phi(\textbf{X})\textbf{W} \parallel^2_F$均为常数项，所以最终我们得到如下的优化目标：
+\begin{equation}\label{fssheq16}
+\begin{split}
+   &  \min_{\textbf{B}} -Tr \Big(\textbf{B}^\top \big(\mu \textbf{LG}+\theta \phi(\textbf{X})\textbf{W} \big) \Big),\\
+   & s.t. \ \ \ \textbf{B}\in\{-1,1\}^{n\times r}.
+\end{split}
+\end{equation}
+而这个式子的闭解为：
+\begin{equation}\label{fssheq17}
+\textbf{B}= sgn\big(\mu \textbf{LG}+\theta \phi(\textbf{X})\textbf{W}\big), \\
+\end{equation}
+
+从公式\ref{fssheq18}中我们可以直观的看出，在每轮迭代中只需要一步，所有位的哈希码便可以被更新。这样的优化方式会比按位优化哈希码的策略节约时间消耗。
+
+
+
+
+\subsection{样本外扩展}
+\esubsection{Out-of-Sample Extension}
+
+我们已经获得了训练数据的哈希码，对于训练数据外的样本，我们需要使用哈希函数为他们生成其对应的哈希码。在设计哈希函数的时候，我们有两种选择，从而引申出我们算法的两种变体，分别是一步哈希策略变体（称为FSSH\_os）和两步哈希策略变体（FSSH\_ts）。
+
+在提出这两种变体之前，我们假设$\textbf{X}_{query}$和$\textbf{B}_{query}$分别是查询数据的原始特征和他们要学到的哈希码。
+
+
+\subsubsection{一步哈希策略FSSH：FSSH\_os}
+\esubsubsection{One-Step FSSH: FSSH\_os}
+
+一步哈希变体直接使用求解哈希码时同时学到的$\textbf{W}$矩阵来构建哈希函数，并没有额外的学习过程。这意味着，哈希码的学习和哈希函数的学习是同步进行的，只需要一步即可，故称为一步哈希策略变体。
+因此，对于查询数据，我们可以用如下的式子计算他们的哈希码：
+\begin{equation}\label{fssheq18}
+\textbf{B}_{query}=sgn(\phi(\textbf{X}_{query})\textbf{W}).
+\end{equation}
+
+
+\subsubsection{两步哈希策略FSSH：FSSH\_ts}
+\esubsubsection{Two-Step FSSH: FSSH\_ts}
+
+两步哈希变体不使用$\textbf{W}$矩阵，它需要重新去学习哈希投影矩阵。FSSH\_ts采用两步哈希的策略，且根据前文的介绍，此时我们需要依据特征矩阵$\phi(\textbf{X})$和哈希码矩阵$\textbf{B}$来学习二进制分类器，且任何有效的分类器在这里都可以被使用。在此，考虑到效率问题，我们选择线性回归来构建FSSH\_ts 的哈希函数。
+
+此时，将样本从特征变换为哈希码的投影矩阵$\textbf{P}$可以通过优化下面的平方误差得到：
+\begin{equation}\label{fssheq19}
+\parallel \textbf{B}-\phi(\textbf{X})\textbf{P} \parallel^2_F + \lambda_e \parallel  \textbf{P}\parallel^2_F,
+\end{equation}
+其中，$\lambda_e$是参数，$\parallel  \textbf{P}\parallel^2_F$是正则化项。最终的解为：
+\begin{equation}\label{fssheq20}
+\textbf{P}=\big(\phi(\textbf{X})^\top \phi(\textbf{X})+ \lambda_e \textbf{I}\big)^{-1}\phi(\textbf{X})^\top \textbf{B}.
+\end{equation}
+
+因此，对于查询数据，我们可以用如下的式子计算他们的哈希码：
+\begin{equation}
+\textbf{B}_{query}=sgn(\phi(\textbf{X}_{query})\textbf{P}).
+\end{equation}
+
+
+
+
+
+
+\section{实验描述和结果分析}
+\esection{Experiments}
+
+在本节中，我们在三个常用数据集使用我们的方法进行媒体检索任务。同时，为了客观的考察我们的方法，多种现有方法被选为基准方法来与我们的方法做比较。
+
+\subsection{数据集}
+\esubsection{Datasets}
+
+\textbf{CIFAR-10数据集}\cite{krizhevsky2009learning}：是一个包含了$60000$张图片的公开数据集。这是一个共有$10$个类别的单标签数据集，这意味着，每一张图片属于且只属于一个类别。每一个类别均包含着$6000$张图片。在本实验中，我们对每一张图片都提取$512$维的GIST特征引用引用。此外，我们随机抽取$1000$张图片来构建实验的测试集，并用剩下的$59000$张图片作为实验训练集。在评测的时候，如果两张图片对应的类别一致，则这两张图片相似；如果两张图片对应的类别不同，则认为这两张图片是不相似的。
+
+\textbf{MNIST数据集}\cite{lecun1998gradient}:包括了$70000$张图片，是机器学习领域最常用的数据集之一。这些图片的内容是数字“0”到数字“9”的手写体，且每张图片只包含一个手写数字。因此，这个数据集是一个单标签数据集，且共有$10$个类别。在本实验中，每张图片都用784 维的特征向量来表示。我们随机抽取$1000$ 张图片来构建实验的测试集，并用剩下的69000张图片作为实验训练集。在评测的时候，如果两张图片对应的类别一致，则这两张图片相似；如果两张图片对应的类别不同，则认为这两张图片是不相似的。
+
+\textbf{NUS-WIDE数据集}\cite{chua2009nus}：是由新加坡国立大学的研究人员构建的数据集，所有图片都是从图片网站Flickr 上收集的，共包含$269648$ 张图片。这个数据集最开始包含$81$ 个类别，为了与本领域的现有工作保持一致的实验设置引用引用SDH，我们筛选出其中出现次数最多的$21$个类别及其对应的$195834$张图片。这是一个多标签数据集，也就是说，每张图片可以对应于多个标签。实验中，每张图片都被表示为一个$500$维的词袋特征。在构建测试集的时候，我们从每个类别中随机采样出$100$张，共计$2100$张图片作为最终的测试集；并把剩下的图片作为我们的训练集。评测时，如果两张图片有至少一个公共标签，那么这两个图片就被认为是相似的；反之，如果两张图片没有公共标签，那么他们就是不相似的。
+
+
+\subsection{对比方法及实验细节}
+\esubsection{Baselines and Implementation Details}
+
+我们选择6种现有方法来进行实验比较。这些方法包括Supervised Hashing with Kernels（KSH）\cite{liu2012supervised}、Supervised Discrete Hashing （SDH）\cite{shen2015supervised}、Fast Supervised Discrete Hashing （FSDH）\cite{gui2018fast}、 Two-Step Hashing（TSH）\cite{lin2013general}、Supervised Hashing with Latent Factor Models （LFH）\cite{zhang2014supervised}和Column Sampling Based Discrete Supervised Hashing （COSDISH）\cite{kang2016column}。其中，前三种方法都是一步哈希方法，后三种属于两步哈希方法。
+
+FSDH的代码由我们依据其论文中的描述实现，除FSDH之外的方法的代码均使用原作者提供的代码。所有方法的参数均按照其论文中的建议设置。此外，因为KSH 和TSH的计算复杂度较高，依据领域中的相关论文\cite{shen2015supervised,kang2016column}，我们只用随机从训练集采样出来的$2000$张图来训练这两个模型。
+对于我们的方法，其参数设置如下：对FSSH\_os，$\mu=10000$，$\theta=100$；对FSSH\_ts，$\mu=10000$，$\theta=0.01$；$\lambda_e=1$，$m=1000$。
+
+所有实验均进行多次，并且每次都随机采样训练和测试集。最终的实验结果是在多次实验的基础上取平均值得到。
+
+实验环境是一台服务器，该机器的相关信息如下：Intel(R) XEON(R) CPU E5-2650@2.30GHz，128GB内存。
+
+
+
+\subsection{评价指标}
+\esubsection{Evaluation Metrics}
+
+依据领域内相关工作，我们采用三种被广泛使用的评价标准：均值平均精度（mean average precision MAP）、前N准确率曲线（top-N precision curves）和准确率-召回率曲线（precision recall curves）。对这三种标准来说，数值越大表明检索的效果越好。
+
+关于这三种评价标准的介绍，请参考章节\ref{chap-EvaMet}。
+
+
+\subsection{结果比较}
+\esubsection{Comparison Results}
+
+\subsubsection{均值平均精度和时间比较}
+\esubsubsection{MAP and Time}
+
+%\begin{table*}[t]\tiny\center
+%\caption{三个数据集上的MAP结果。位数相同情况下最好的实验结果被加粗显示。}\label{chap4map}
+%\begin{tabular}{c||cccc||cccc||cccc}\hline
+% \multirow{2}{*}{Method} &\multicolumn{4}{c||}{CIFAR-10}&\multicolumn{4}{c||}{MNIST}&\multicolumn{4}{c}{NUS-WIDE}\\
+%\cline{2-13}
+%&16 bits&32位&64位&96位&16位&32位&64位&96位&16位&32位&64位&96位\\\hline
+%{KSH}&{0.2626}&{0.2897}&{0.3108}&{0.3185}&{0.8017}&{0.8233}&{0.8390}&{0.8400}&{0.3703}&{0.3728}&{0.3785}&{0.3786}\\
+%{SDH}&{0.3525}&{0.3788}&{0.3986}&{0.4135}&{0.8718}&{0.8873}&{0.8958}&{0.8972}&{0.4113}&{0.4114}&{0.4135}&{0.4211}\\
+%{FSDH}&{0.3284}&{0.3661}&{0.3986}&{0.4110}&{0.8562}&{0.8804}&{0.8907}&{0.8962}&{0.4052}&{0.4115}&{0.4155}&{0.4166}\\\hline
+%{TSH}&{0.3202}&{0.3551}&{0.3711}&{0.3843}&{0.9007}&{0.9215}&{0.9281}&{0.9323}&{0.4424}&{0.4479}&{0.4555}&{0.4545}\\
+%{LFH}&{0.3803}&{0.5061}&{0.6133}&{0.6288}&{0.5564}&{0.7577}&{0.8593}&{0.8575}&{0.5767}&{0.5974}&{0.6042}&{0.6124}\\
+%{COSDISH}&{0.5737}&{0.6109}&{0.6310}&{0.6368}&{0.8551}&{0.8754}&{0.8818}&{0.8888}&{0.5719}&{0.5913}&{0.5916}&{0.6027}\\\hline
+%{FSSH\_os}&{0.3896}&{0.5592}&{0.6497}&{0.6760}&{0.9023}&{0.9480}&{0.9360}&{0.9311}&{0.4813}&{0.5255}&{0.5867}&{0.6029} \\
+%{FSSH\_ts}&\textbf{0.6350}&\textbf{0.6829}&\textbf{0.7071}&\textbf{0.7108}&\textbf{0.9443}&\textbf{0.9649}
+%&\textbf{0.9713}&\textbf{0.9721}&\textbf{0.5846}&\textbf{0.6060}&\textbf{0.6105}&\textbf{0.6225} \\\hline
+%\end{tabular}\end{table*}
+
+\begin{table}[t]\center%\small
+\caption{CIFAR-10数据集上的MAP结果。位数相同情况下最好的实验结果被加粗显示。}\label{chap4mapcifar}
+\begin{tabular}{ccccc}\hline
+ {Method}& 16位  & 32位  & 64位  & 96位  \\\hline
+{KSH}&{0.2626}&{0.2897}&{0.3108}&{0.3185}\\
+{SDH}&{0.3525}&{0.3788}&{0.3986}&{0.4135}\\
+{FSDH}&{0.3284}&{0.3661}&{0.3986}&{0.4110}\\
+{TSH}&{0.3202}&{0.3551}&{0.3711}&{0.3843}\\
+{LFH}&{0.3803}&{0.5061}&{0.6133}&{0.6288}\\
+{COSDISH}&{0.5737}&{0.6109}&{0.6310}&{0.6368}\\\hline
+{FSSH\_os}&{0.3896}&{0.5592}&{0.6497}&{0.6760} \\
+{FSSH\_ts}&\textbf{0.6350}&\textbf{0.6829}&\textbf{0.7071}&\textbf{0.7108} \\\hline
+\end{tabular}\end{table}
+
+\begin{table}[t]\center%\small
+\caption{MNIST数据集上的MAP结果。位数相同情况下最好的实验结果被加粗显示。}\label{chap4mapmnist}
+\begin{tabular}{ccccc}\hline
+ {Method}& 16位  & 32位  & 64位  & 96位  \\\hline
+{KSH}&{0.8017}&{0.8233}&{0.8390}&{0.8400}\\
+{SDH}&{0.8718}&{0.8873}&{0.8958}&{0.8972}\\
+{FSDH}&{0.8562}&{0.8804}&{0.8907}&{0.8962}\\
+{TSH}&{0.9007}&{0.9215}&{0.9281}&{0.9323}\\
+{LFH}&{0.5564}&{0.7577}&{0.8593}&{0.8575}\\
+{COSDISH}&{0.8551}&{0.8754}&{0.8818}&{0.8888}\\\hline
+{FSSH\_os}&{0.9023}&{0.9480}&{0.9360}&{0.9311} \\
+{FSSH\_ts}&\textbf{0.9443}&\textbf{0.9649}
+&\textbf{0.9713}&\textbf{0.9721} \\\hline
+\end{tabular}\end{table}
+
+\begin{table}[t]\center%\small
+\caption{NUS-WIDE数据集上的MAP结果。位数相同情况下最好的实验结果被加粗显示。}\label{chap4mapnus}
+\begin{tabular}{ccccc}\hline
+ {Method}& 16位  & 32位  & 64位  & 96位  \\\hline
+{KSH}&{0.3703}&{0.3728}&{0.3785}&{0.3786}\\
+{SDH}&{0.4113}&{0.4114}&{0.4135}&{0.4211}\\
+{FSDH}&{0.4052}&{0.4115}&{0.4155}&{0.4166}\\\
+{TSH}&{0.4424}&{0.4479}&{0.4555}&{0.4545}\\
+{LFH}&{0.5767}&{0.5974}&{0.6042}&{0.6124}\\
+{COSDISH}&{0.5719}&{0.5913}&{0.5916}&{0.6027}\\\hline
+{FSSH\_os}&{0.4813}&{0.5255}&{0.5867}&{0.6029} \\
+{FSSH\_ts}&\textbf{0.5846}&\textbf{0.6060}&\textbf{0.6105}&\textbf{0.6225} \\\hline
+\end{tabular}\end{table}
+
+\begin{figure}[t]
+\begin{minipage}{0.49\linewidth}\centering
+\centerline{\includegraphics[width=7.5cm]{Images/chap4/C32PN.eps}}\centerline{\footnotesize(a) CIFAR-10 32 位}\medskip
+\end{minipage}
+\begin{minipage}{0.49\linewidth}\centering
+\centerline{\includegraphics[width=7.5cm]{Images/chap4/C96PN.eps}}\centerline{\footnotesize(b) CIFAR-10 96 位}\medskip
+\end{minipage}\\
+\begin{minipage}{0.49\linewidth}\centering
+\centerline{\includegraphics[width=7.5cm]{Images/chap4/M32PN.eps}}\centerline{\footnotesize(c) MNIST 32 位}\medskip
+\end{minipage}
+\begin{minipage}{0.49\linewidth}\centering
+\centerline{\includegraphics[width=7.5cm]{Images/chap4/M96PN.eps}}\centerline{\footnotesize(d) MNIST 96 位}\medskip
+\end{minipage}\\
+\begin{minipage}{0.49\linewidth}\centering
+\centerline{\includegraphics[width=7.5cm]{Images/chap4/N32PN.eps}}\centerline{\footnotesize(e) NUS-WIDE 32 位}\medskip
+\end{minipage}
+\begin{minipage}{0.49\linewidth}\centering
+\centerline{\includegraphics[width=7.5cm]{Images/chap4/N96PN.eps}}\centerline{\footnotesize(f) NUS-WIDE 96 位}\medskip
+\end{minipage}\\
+\caption{所有方法在三个数据集上的前N准确率曲线，其中哈希码位数为32和96位。}\medskip\label{chap4PN}\end{figure}
+
+
+
+表\ref{chap4mapcifar}、表\ref{chap4mapmnist}和表\ref{chap4mapnus}分别列出了在CIFAR-10、MNIST和NUS-WIDE数据集上的实验结果。从这些表中我们有如下的发现：
+\begin{itemize}
+\item 我们的方法FSSH\_os在效果上比所有的一步哈希对比方法都要好。具体到数值中，在CIFAR-10数据集上，FSSH\_os 在最好的一步哈希的效果上获得了$10.5\%$（16位）、$47.6\%$（32 位）、$63.0\%$（64 位）和$63.5\%$（96位）的提升；在MNIST 数据集上，FSSH\_os 相对于最好的一步哈希，效果提升了$3.53\%$（16 位）、$6.84\%$（32位）、$4.49\%$（64 位）和$3.78\%$（96 位）；在NUS-WIDE数据集上，对应的提升为$17.0\%$（16 位）、$27.7\%$ （32 位）、$41.9\%$（64 位）和$43.2\%$（96 位）。
+\item 我们方法的两步哈希版本FSSH\_ts，其表现要高于所有的两步哈希对比方法。
+\item FSSH\_ts在所有数据集的所有位的情况下，均取得了最佳的实验效果。这个现象表面，两步哈希可能优于一步哈希方法。
+\item FSSH\_os的实验结果比SDH和FSDH的结果提高了很多，其一个可能原因是，FSSH\_os在学习过程中利用了成对的相似性矩阵以及标签矩阵，而SDH和 FSDH 仅仅使用了标签矩阵。同时，对比方法LFH和COSDISH也利用了成对的相似性矩阵，并且他们的实验效果也好于SDH 和FSDH。这些结果，在某种程度上显示，相对于标签矩阵，成对的相似性矩阵或许能更好地监督哈希码的生成。
+\item FSSH\_ts的效果比LFH和COSDISH的效果更好，可能的原因有两个。其一，LFH和 COSDISH为了避免过大的复杂度，在学习过程中均使用了列采样技术；采样可能会导致信息损失，进而使效果下降。其二，FSSH\_ts 比LFH和COSDISH 多考虑了标签矩阵，在训练中考虑更多的监督信息，有可能会学习出更加精准的哈希码。
+\end{itemize}
+总而言之，我们的方法在效果上比现有方法更好，进而显示了我们设计的损失函数和优化方法是行之有效的。
+
+
+
+
+\subsubsection{前N准确率曲线比较}
+\esubsubsection{Top-N Precision Curves}
+
+
+
+
+
+
+
+图\ref{chap4PN}画出了前N准确率曲线，从图中我们可以有如下发现：
+\begin{itemize}
+\item 在CIFAR-10数据集上。我们的方法FSSH\_os比所有的一步哈希更准确。同时，两步哈希版本FSSH\_ts 的曲线高于所有的两步哈希对比方法，并且可以发现该曲线是显著高于其他方法的曲线。
+\item 在MNIST数据集上。FSSH\_os仍然比所有的一步哈希更准确，且FSSH\_ts也比所有的两步哈希对比方法更准确。
+\item 在NUS-WIDE数据集上。实验结果与在前两个数据集上的结果一致：我们的一步哈希和两步哈希方法均比对应的一步哈希和两步哈希对比方法更好。
+\item 在所有数据集的所有情况下，FSSH\_ts一直保持最好的结果。
+\end{itemize}
+
+\begin{figure}[t]
+\begin{minipage}{0.49\linewidth}\centering
+\centerline{\includegraphics[width=7.5cm]{Images/chap4/C32PR.eps}}\centerline{\footnotesize(a) CIFAR-10 32 位}\medskip
+\end{minipage}
+\begin{minipage}{0.49\linewidth}\centering
+\centerline{\includegraphics[width=7.5cm]{Images/chap4/C96PR.eps}}\centerline{\footnotesize(b) CIFAR-10 96 位}\medskip
+\end{minipage}\\
+\begin{minipage}{0.49\linewidth}\centering
+\centerline{\includegraphics[width=7.5cm]{Images/chap4/M32PR.eps}}\centerline{\footnotesize(c) MNIST 32 位}\medskip
+\end{minipage}
+\begin{minipage}{0.49\linewidth}\centering
+\centerline{\includegraphics[width=7.5cm]{Images/chap4/M96PR.eps}}\centerline{\footnotesize(d) MNIST 96 位}\medskip
+\end{minipage}\\
+\begin{minipage}{0.49\linewidth}\centering
+\centerline{\includegraphics[width=7.5cm]{Images/chap4/N32PR.eps}}\centerline{\footnotesize(e) NUS-WIDE 32 位}\medskip
+\end{minipage}
+\begin{minipage}{0.49\linewidth}\centering
+\centerline{\includegraphics[width=7.5cm]{Images/chap4/N96PR.eps}}\centerline{\footnotesize(f) NUS-WIDE 96 位}\medskip
+\end{minipage}\\
+\caption{所有方法在三个数据集上的准确率-召回率曲线，其中哈希码位数为32和96位。}\medskip\label{chap4PR}\end{figure}
+
+
+总而言之，在前N准确率曲线评价下，相比于所有的对比方法，我们的方法体现出了其明显的优势。
+
+
+\subsubsection{准确率-召回率曲线比较}
+\esubsubsection{Precision-Recall Curves}
+
+
+
+我们在三个数据集上画出了准确率-召回率曲线，分别对应于32位和96位哈希码的情况。实验曲线图为图\ref{chap4PR}，从中我们可以发现：
+\begin{itemize}
+\item 在CIFAR-10和MNIST这两个数据集上。FSSH\_os的结果比所有的一步哈希方法更好；FSSH\_ts的 结果也都好于所有的两步哈希对比方法。
+\item 在MNIST数据集上。所有的方法都可以有很好的效果。这是因为MNIST是一个相对“容易”的数据集，其挑战性比CIFAR-10和NUS-WIDE 小。
+\item 在NUS-WIDE数据集上。实验结果与在前两个数据集上的结果基本一致。在哈希码位数是96的时候，虽然我们的方法和COSDISH的曲线有交叉，但是FSSH\_ts 的曲线大部分是高于COSDISH的曲线的。
+\item 在所有数据集的所有情况下，FSSH\_ts均可以取得最佳或者与最佳结果接近的效果。
+\end{itemize}
+
+通过准确率-召回率曲线曲线评价，我们可以得出：我们提出的方法是行之有效的。
+
+
+
+
+
+\subsection{可扩展性比较}
+\esubsection{Scalability}
+
+
+考量一个方法的好坏，除了其效果，也需要评价其效率。在本节中，我们汇报和分析FSSH及对比方法在三个数据集上的时间结果。
+
+%\begin{table*}[!htbp]\tiny\center
+%\caption{数据集CIFAR-10和MNIST上的训练和测试时间}\label{chap4time}
+%\begin{tabular}{c||rrr|rrr||rrr|rrr}\hline
+%\multirow{3}{*}{Method}  & \multicolumn{6}{c||}{CIFAR-10} &  \multicolumn{6}{c}{MNIST}\\ \cline{2-13}\cline{2-13}
+%& \multicolumn{3}{c|}{训练时间（单位：秒）} & \multicolumn{3}{c||}{测试时间（单位：豪秒）} & \multicolumn{3}{c|}{训练时间（单位：秒）} & \multicolumn{3}{c}{测试时间（单位：豪秒）} \\ \cline{2-13}
+%&16位&32位&64位&16位&32位&64位&16位&32位&64位 &16位 &32位 &64位\\\hline
+%{KSH} &{111.31}&{235.29}&{359.24}&{2.57}&{3.91}&{5.33}&{169.80}&{302.47}&{480.94}&{5.20}&{5.69}&{7.75}\\
+%{SDH}  &{8.96}&{25.16}&{83.80}&{2.62}&{3.74}&{5.35}&{15.74} &{71.82} &{141.27} &{3.90} &{6.47} &{7.21}\\
+%{FSDH} &{6.25} &{6.62} &{6.87} &{2.60} &{3.80} &{5.78}  &{9.01} &{9.20} &{9.88} &{4.08} &{5.82} &{7.03}\\
+%{TSH}&{105.37}&{206.98}&{340.37}&{2.56}&{4.02}&{6.06}&{173.20}&{343.73}&{483.02}&{4.33}&{5.41} &{7.68}\\
+%{LFH}  &{4.06}&{7.80}&{13.79}&{2.28}&{3.57}&{5.74}&{7.44} &{12.19} &{18.41} &{2.88} &{4.33} &{5.93}\\
+%{COSDISH} &{15.99}&{78.99}&{189.59}&{2.45}&{3.89} &{5.54} &{20.88} &{104.08} &{224.01} &{2.75} &{4.19} &{5.65}\\\hline
+%{FSSH\_os} &{2.98} &{3.40} &{3.88} &{2.32} &{3.62} &{5.68} &{5.06} &{5.20} &{5.23} &{4.19} &{5.80} &{7.06} \\
+%{FSSH\_ts} &{4.10} &{4.85} &{5.19} &{2.52} &{3.89} &{5.70}&{5.55} &{5.78} &{6.72} &{2.81} &{4.23} &{6.56} \\\hline\end{tabular}\end{table*}
+
+
+\begin{table}[t] \center%\small
+\caption{数据集CIFAR-10上的训练和测试时间}\label{chap4timecifar}
+\begin{tabular}{cccc|ccc}\hline
+ \multirow{2}{*}{Method}
+& \multicolumn{3}{c|}{训练时间（单位：秒）} &  \multicolumn{3}{c}{测试时间（单位：豪秒）}\\\cline{2-7}
+&16位 &32位 &64位  &16位 &32位 &64位 \\\hline
+{KSH} &{111.31}&{235.29}&{359.24}&{2.57}&{3.91}&{5.33}\\
+{SDH}  &{8.96}&{25.16}&{83.80}&{2.62}&{3.74}&{5.35} \\
+{FSDH} &{6.25} &{6.62} &{6.87} &{2.60} &{3.80} &{5.78} \\
+{TSH}&{105.37}&{206.98}&{340.37}&{2.56}&{4.02}&{6.06}\\
+{LFH}  &{4.06}&{7.80}&{13.79}&{2.28}&{3.57}&{5.74}\\
+{COSDISH} &{15.99}&{78.99}&{189.59}&{2.45}&{3.89} &{5.54} \\\hline
+{FSSH\_os} &{2.98} &{3.40} &{3.88} &{2.32} &{3.62} &{5.68} \\
+{FSSH\_ts} &{4.10} &{4.85} &{5.19} &{2.52} &{3.89} &{5.70}  \\
+\hline\end{tabular}\end{table}
+
+
+\begin{table}[t] \center%\small
+\caption{数据集MNIST上的训练和测试时间}\label{chap4timemnist}
+\begin{tabular}{cccc|ccc}\hline
+ \multirow{2}{*}{Method}
+& \multicolumn{3}{c|}{训练时间（单位：秒）} &  \multicolumn{3}{c}{测试时间（单位：豪秒）}\\\cline{2-7}
+&16位 &32位 &64位  &16位 &32位 &64位 \\\hline
+{KSH} &{169.80}&{302.47}&{480.94}&{5.20}&{5.69}&{7.75}\\
+{SDH}  &{15.74} &{71.82} &{141.27} &{3.90} &{6.47} &{7.21}\\
+{FSDH} &{9.01} &{9.20} &{9.88} &{4.08} &{5.82} &{7.03}\\
+{TSH} &{173.20}&{343.73}&{483.02}&{4.33}&{5.41} &{7.68}\\
+{LFH}  &{7.44} &{12.19} &{18.41} &{2.88} &{4.33} &{5.93}\\
+{COSDISH}  &{20.88} &{104.08} &{224.01} &{2.75} &{4.19} &{5.65}\\\hline
+{FSSH\_os}  &{5.06} &{5.20} &{5.23} &{4.19} &{5.80} &{7.06} \\
+{FSSH\_ts} &{5.55} &{5.78} &{6.72} &{2.81} &{4.23} &{6.56}  \\
+\hline\end{tabular}\end{table}
+
+
+表\ref{chap4timecifar}和表\ref{chap4timemnist}分别列出了所有方法在CIFAR-10和MNIST数据集上的训练时间和测试时间，从这些结果中我们发现：
+\begin{itemize}
+\item 尽管只用2000个样本来训练KSH和TSH，这两个方法仍有很长的训练时间。原因在于，这两个方法在训练时直接使用了$O(n^2)$的成对的相似性矩阵，从而造成了很高的复杂度。
+\item 训练SDH和COSDISH方法要比训练KSH和TSH快很多，但是这两个方法的训练时间仍比我们的方法长很久。
+\item 除了FSDH之外的所有对比方法都是使用按位优化的方式来学习哈希码的。因此，随着哈希码位数的增加，他们所需要的训练时间会相应地变长。虽然FSDH方法是基于SDH模型来设计的，但是因为FSDH摒弃了按位优化的策略，转而同时优化所有位的哈希码，所以它可以比SDH快的多地完成训练。同样的，我们的方法也是同时优化所有位的哈希码，并且我们的方法训练效率比FSDH要高。
+\item FSSH\_ts比FSSH\_os要多消耗一些训练时间，这额外的时间是用来学习其哈希函数的。
+\end{itemize}
+
+\begin{table}[t]\center%\small
+\caption{数据集NUS-WIDE上的训练时间，单位：秒。}
+\label{chap4nustime}\begin{tabular}{ccccc}\hline
+\multirow{2}{*}{Method} &  \multicolumn{4}{c}{NUS-WIDE (193K)}   \\ \cline{2-5}
+ & 16位  & 32位  & 64位  & 96位  \\\hline
+{SDH} & {25.13} & {77.28} & {262.03} & {680.86}   \\
+{FSDH} & {17.91} & {19.14} & {20.42} & {26.90}   \\
+{LFH} & {16.45} & {19.96} & {28.17} & {37.35}  \\
+{COSDISH} & {14.06} & {54.22} & {227.01} & {512.14} \\
+\hline
+{FSSH\_os} & {9.78} & {10.35} & {11.98} & {14.61}  \\
+{FSSH\_ts} & {13.71} & {14.09} & {15.51} & {15.53}  \\\hline
+\end{tabular}\end{table}
+
+为了进一步的探究我们方法的可扩展性，我们在NUS-WIDE数据上进行实验，并在表\ref{chap4nustime}中列出所需的训练时间。考虑到KSH 和TSH 训练较慢，我们在此表中并不列出他们的时间结果。从表中我们可以很清楚地发现，FSSH\_os和FSSH\_ts消耗的训练时间均比其他的对比方法要少很多。尤其在16位哈希码的情况下，FSSH\_os仅仅需要不到10秒中变可以在$193833$张图片上完成训练。此外，因为采用同时优化所有哈希码位的策略，所以我们的方法所消耗的训练时间并不会随着位数的增加而有显著的增加。
+
+在这节中，我们可以得出如下结论：我们的方法可以很好地扩展到大规模数据上；我们的方法可以很好地扩展到哈希码较长的情况下。
+
+
+
+
+\subsection{收敛性}
+\esubsection{Convergence}
+
+\begin{figure}[t]
+\begin{minipage}{0.49\linewidth}\centering
+\centerline{\includegraphics[width=7.5cm]{Images/chap4/iteration1step}}\centerline{(a) FSSH\_os}\medskip
+\end{minipage}
+\begin{minipage}{0.49\linewidth}\centering
+\centerline{\includegraphics[width=7.5cm]{Images/chap4/iteration2step}}\centerline{(b) FSSH\_ts}\medskip
+\end{minipage}\\
+\caption{FSSH\_os和FSSH\_ts在三个数据集上的收敛性曲线，哈希码位数为32位。}\medskip\label{chap4loss}\end{figure}
+
+为了验证我们提出的方法是可以收敛的，我们画出了函数值随迭代次数变化的图\ref{chap4loss}。为了更直观地发现函数值的变化趋势，我们把所有的函数值均除以函数值的最大值，从而得到如图的相对数值。
+
+从图中我们可以发现，在三个数据集上，FSSH\_os和FSSH\_ts均可以在很少的迭代步数后收敛。之所以可以快速收敛，得益于我们精心设计的损失函数以及对应的包含闭解的优化算法。
+
+
+
+
+\subsection{参数敏感性分析}
+\esubsection{Parameter Sensitivity Analysis}
+
+\begin{figure}[t]\begin{minipage}{0.49\linewidth}\centering
+\centerline{\includegraphics[width=7.5cm]{Images/chap4/mu}}\centerline{(a) $\mu$}\medskip\end{minipage}
+\begin{minipage}{0.49\linewidth}\centering
+\centerline{\includegraphics[width=7.5cm]{Images/chap4/theta}}\centerline{(b) $\theta$}\medskip
+\end{minipage}\\
+\caption{FSSH\_os和FSSH\_ts在CIFAR-10数据集上的参数敏感性图，哈希码位数为32位。}\medskip\label{chap4param}\end{figure}
+
+我们通过在CIFAR-10数据集上的实验，来探究参数的取值对结果的影响。我们取哈希码为32位的情况，并画出均值平均精度关于参数的图（见图\ref{chap4param}）。为了便于观察，我们把均值平均精度除以均值平均精度的最大值，从而得到相对的数值。此外，我们设置参数在范围$[10^{-6}, 10^5]$ 中变动。
+
+从图中，我们观察到：
+\begin{itemize}
+\item 参数μ和参数θ均会对结果产生影响。
+\item 当参数$\mu$在的范围$[10^{1}, 10^4]$中时，FSSH\_os会有很好的表现；当参数$\theta$在$10$到$100$范围变动时，FSSH\_os 会有很好的结果。
+\item FSSH\_ts在$\mu$属于$[10^{1}, 10^4]$，$\theta$属于$[10^{-4}, 10^0]$的时候有很好的结果。
+\end{itemize}
+
+
+
+\section{使用深度学习的FSSH:FSSH\_deep}
+\esection{FSSH with Deep Learning ：FSSH\_deep}
+
+最近一段时间，深度学习被广泛使用在各个研究领域，并且取得了很多喜人的结果\cite{he2016deep,goodfellow2014generative,krizhevsky2012imagenet,sutskever2014sequence,he2017mask,ren2015faster,donahue2015long,simonyan2014two,tran2015learning}。 因此，我们提出了一个基于深度学习的FSSH 模型的变体（称为FSSH\_deep）。FSSH\_deep属于两步哈希的范畴，我们保持哈希码学习的过程不变，即第一步不变，在哈希函数学习中，我们使用深度神经网络作为哈希函数，即在第二步中利用深度学习。
+应注意，尽管FSSH\_deep使用了深度学习，但它并不是端到端的方法。我们的研究重点在于得到哈希码的关键处，即如何设计损失函数和优化算法。我们相信，如果可以把FSSH\_deep改为端到端的方法，能更好地利用深度学习的优势，进而达到提升我们方法准确性的效果；我们把这个想法留作后续的研究方向，此处我们仍用当前的变体FSSH\_deep来展现本章所提出的模型的有效性。
+
+
+\subsection{FSSH\_deep}
+\esubsection{FSSH\_deep}
+
+在之前的章节我们已经介绍过两步哈希，并且已经了解到：在第二步中任何有效的分类预测模型都可以被用作哈希函数。因此，我们选择深度神经网络作为FSSH\_deep 的哈希函数。深度神经网络模型有很多，他们的学习能力也各不相同，选择不同的模型肯定会造成最终的结果存在差异；然而，研究哪一个网络模型能提供最好的效果并不是本章节的重点，所以我们这里选择CNN-F\cite{chatfieldreturn}来作为一个示例，且不讨论其它选择。
+我们通过解决一个多标签分类问题并优化如下的损失函数来训练深度网络：
+\begin{equation}
+L=-\frac{1}{n} \sum_{i=1}^n [\textbf{b}_i \log\textbf{p}_i+(1-\textbf{b}_i)\log(1-\textbf{p}_i) ],
+\end{equation}
+其中，$\textbf{b}_i$是第$i$个训练数据对应的哈希码（在此我们把哈希码中所有的$-1$变为$0$），$\textbf{p}_i=\sigma(\textbf{z}_i)$，$\sigma(\cdot)$是sigmoid函数，$\textbf{z}_i$ 是网络的输出。我们用反向传播算法和随机梯度下降来学习网络的参数。在训练结束之后，样本外的查询数据的哈希码可以由下式生成：
+\begin{equation}
+\textbf{B}_{query}=sgn(\textbf{Z}_{query}),
+\end{equation}
+其中，$\textbf{Z}_{query}$是网络关于查询数据的输出。
+
+此外，FSSH\_deep的第一步涉及到图片的特征$\textbf{X}$，由另外一个预训练的CNN-F网络获得。
+
+
+\subsection{与深度哈希模型的对比}
+\esubsection{Comparisons with Deep Hashing Methods}
+
+\begin{table}\small\center
+\caption{数据集CIFAR-10上的MAP结果。位数相同情况下最好的实验结果被加粗显示。}
+\label{chap4mapdeep}\begin{tabular}{c|ccc}\hline
+ \multirow{2}{*}{Method} &\multicolumn{3}{c}{CIFAR-10}\\\cline{2-4}
+&24位&32位&48位\\\hline
+{DSRH}&{0.611}&{0.617}&{618}\\
+{DSCH}&{0.613}&{0.617}&{0.620}\\
+{DRSCH}&{0.622}&{0.629}&{0.631}\\
+{DPSH}&{0.781}&{0.795}&{0.807}\\
+{VDSH}&{0.848}&{0.844}&{0.845}\\
+{DTSH}&{0.923}&{0.925}&{0.926}\\
+{DSDH}&\textbf{0.940}&\textbf{0.939}&\textbf{0.939}\\\hline
+{FSSH\_deep}&{0.878}&{0.862}&{0.883} \\ \hline
+ \end{tabular}\end{table}
+
+
+
+为了验证FSSH\_deep的效果，我们遵循领域相关工作的实验设置\cite{li2017deep}。我们选择数据集CIFAR-10来进行实验，且从每一类中抽取$1000$ 图片，一共$10000$ 张图片构成测试集，并把剩下的$50000$张图片作为训练集。我们选取DSRH\cite{zhao2015deep}、DSCH\cite{zhang2015bit}、DRSCH\cite{zhang2015bit}、DPSH\cite{li2016feature}、VDSH\cite{zhang2016efficient}、DTSH \cite{wang2016deep}和DSDH\cite{li2017deep}作为我们的对比方法。这些对比方法的实验结果直接从现有的相关文献\cite{li2017deep} 中获取。
+
+表\ref{chap4mapdeep}列出了最终的关于均值平均精度的结果。我们可以看到，一些对比方法的效果比FSSH\_deep 要好。造成这个现象的原因是：我们的方法并非端到端的方法；并且第一步中图片的特征$\textbf{X}$是由预训练的模型直接获得，并不与我们的哈希码学习过程切合。与FSSH\_deep不同的是，所有的对比方法都是同时进行特征学习和哈希码学习，也就是端到端的学习。尽管FSSH\_deep不是端到端的模型，我们发现，它的效果仍高于不少对比方法，这充分体现了FSSH模型的有效性。我们相信，如果可以实现一个端到端的FSSH模型，其效果会有进一步的提升，我们把这个想法留作之后的研究方向。
+
+
+\section{FSSH与SSDH的比较}
+\esection{Comparisons with SSDH}
+
+因为SSDH和FSSH的出发点很相近，我们在本节将详细比较这两个方法。
+
+FSSH方法具有很多SSDH没有的优点。1）首先，在优化哈希码的时候，FSSH的策略要优于SSDH。SSDH采用的是按位优化策略，且由前文可知，这种策略需要很多步才能完成哈希码的优化，从而会造成一定的时间消耗。而FSSH 采用的是一步直接优化所有位哈希码的策略，故而FSSH优化哈希码的时间消耗会比较小，且哈希码位数变化对时间的影响不大。2）在把$n \times n$ 大小的成对相似性矩阵$\textbf{S}$ 嵌入到一个低维空间的矩阵中的时候，FSSH所找到的低维空间比SSDH 的空间更优。具体来说，SSDH 在求解目标函数的时候使用的中间项的大小是$n \times c$ 的，仍然与数据量$n$ 的大小存在关系。而FSSH使用的中间项的大小是$m \times c$的，其中$m$（核特征的维数）是固定且远小于$n$的。3）第三个优点存在于生成哈希码的过程中，SSDH仅能从监督信息中学习出哈希码，而FSSH生成的哈希码不仅考虑了监督信息还考虑了数据的特征信息。
+
+\begin{table}\small\center
+\caption{SSDH和FSSH在三个数据集上的MAP结果。位数相同情况下最好的实验结果被加粗显示。}\label{chap4mapssdh}\begin{tabular}{c|cccc}\hline
+ \multirow{2}{*}{Method} &\multicolumn{4}{c}{CIFAR-10}\\\cline{2-5}
+&16位&32位&64位&96位\\\hline
+{SSDH}&\textbf{0.6698}&\textbf{0.6991}&{0.7046}&{0.7063} \\
+{FSSH\_ts}&{0.6350}&{0.6829}&\textbf{0.7071}&\textbf{0.7108} \\ \hline \hline
+ \multirow{2}{*}{Method} &\multicolumn{4}{c}{MNIST}\\\cline{2-5}
+&16位&32位&64位&96位\\\hline
+{SSDH}&{0.9557}&{0.9639}&{0.9669}&{0.9683}  \\
+{FSSH\_ts}&\textbf{0.9443}&\textbf{0.9649} &\textbf{0.9713}&\textbf{0.9721} \\ \hline \hline
+ \multirow{2}{*}{Method} &\multicolumn{4}{c}{NUS-WIDE}\\\cline{2-5}
+&16位&32位&64位&96位\\\hline
+{SSDH}&\textbf{0.6023}&{0.6035}&{0.6069}&{0.6101} \\
+{FSSH\_ts} &{0.5846}&\textbf{0.6060}&\textbf{0.6105}&\textbf{0.6225} \\\hline\end{tabular}\end{table}
+
+
+\begin{table}[t]\small\center
+\caption{SSDH和FSSH在数据集NUS-WIDE上的训练时间。}
+\label{chap4nustimessdh}\begin{tabular}{c|rrrr}\hline
+\multirow{2}{*}{Method} &  \multicolumn{4}{c}{NUS-WIDE (193K)}   \\ \cline{2-5}
+ & 16位  & 32位  & 64位  & 96位  \\\hline
+{SSDH} & {14.47} & {25.60} & {61.54} & {129.84} \\
+{FSSH\_ts} & {13.71} & {14.09} & {15.51} & {15.53}  \\\hline
+\end{tabular}\end{table}
+
+为了更直观地比较两者，表\ref{chap4mapssdh}列出了SSDH和FSSH在三个数据集上的均值平均精度结果，且表\ref{chap4nustimessdh}列出了SSDH和FSSH 在大规模数据集NUS-WIDE 上的训练时间。因为SSDH 属于两步哈希，所以上述结果中我们只汇报FSSH\_ts方法。从这些实验结果中我们可以发现：
+\begin{itemize}
+\item FSSH在大部分情况下的实验结果都比SSDH的结果要好；在其它情况下，FSSH的结果也与SSDH的结果相差无多。并且训练时FSSH引入的中间项的空间消耗比SSDH引入的中间项的空间消耗要小很多。
+\item 在NUS-WIDE数据集上，FSSH的训练时间比SSDH所需的时间要少。SSDH消耗的训练时间会随着哈希码位数的变长而显著地增加；然而FSSH 的训练时间对哈希码位数的变化不敏感。
+\end{itemize}
+
+从理论分析和实验结果上看，FSSH比SSDH更优。
+
+
+
+\section{小结}
+\esection{Summary}
+
+在本章中，我们设计了一个新颖且有效的监督哈希模型，名为快速可扩展监督哈希方法。该方法可以在很短的时间消耗内完成模型的训练。我们通过引入一个中间项从而把样本间成对的相似性矩阵嵌入其中，在优化时可以避免直接使用成对的相似性矩阵，进而减小空间消耗及优化复杂度。此外，我们的方法不仅可以考虑监督（类别）信息，还可以考虑数据本身的特性。在本文中我们设计了三种变体，分别是一步哈希变体FSSH\_os、 两步哈希变体FSSH\_ts和使用深度学习的变体FSSH\_deep。通过在三个常见数据集上的大量实验，FSSH的有效性得到了充分的验证。在之后的研究中，我们希望可以把深度学习结合到FSSH方法中，并实现端到端的学习，从而可以进一步提高FSSH的检索效果。
+
+
+

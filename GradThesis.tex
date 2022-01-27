@@ -1,0 +1,88 @@
+\documentclass[twoside,openany]{SDUthesis}
+%\hypersetup{colorlinks=false}
+%\makeatletter
+%\renewcommand\normalsize{%
+%   \@setfontsize\normalsize\@xpt\@xiipt
+%   \abovedisplayskip 6\p@ \@plus3\p@ \@minus4\p@
+%   \abovedisplayshortskip \z@ \@plus3\p@
+%   \belowdisplayshortskip 6\p@ \@plus3\p@ \@minus3\p@
+%   \belowdisplayskip \abovedisplayskip
+%   \let\@listi\@listI}
+%\makeatother
+
+\newcommand{\makeheadrule}{%ҳü
+\makebox[0pt][l]{\rule[0.55\baselineskip]{\headwidth}{0.3pt}}
+\rule[0.7\baselineskip]{\headwidth}{2.5pt}}
+\renewcommand{\headrule}{%
+{\if@fancyplain\let\headrulewidth\plainheadrulewidth\fi
+\makeheadrule}}
+\makeatother
+
+\makeatletter
+\newcommand{\figcaption}{\def\@captype{figure}\caption}
+\newcommand{\tabcaption}{\def\@captype{table}\caption}
+\makeatother
+
+\setlength{\abovecaptionskip}{0pt}
+\setlength{\belowcaptionskip}{0pt}
+
+\usepackage{mathrsfs}
+\usepackage{pdfpages}
+\usepackage{changepage}
+
+%\usepackage{subfigure}
+\usepackage{color}
+\usepackage{ulem}
+\usepackage{graphicx}
+\usepackage{subfig}
+\usepackage{longtable}
+\usepackage{epstopdf}
+\usepackage{ccmap}
+%\newcommand{\tabincell}[2]{\begin{tabular}{@{}#1@{}}#2\end{tabular}}
+%\newcommand{\upcite}[1]{\textsuperscript{\textsuperscript{\cite{#1}}}}
+
+\begin{document}
+\raggedbottom
+
+\includepdfmerge{FrontReviewTwo-LCX.pdf,-}
+
+%\makeOSandCPRTpage
+
+
+\SDUfrontmatter
+
+\SDUcontents
+\SDUEcontents
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% ժҪ
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{./Chapters/abstractC}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Ӣ��ժҪ
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{./Chapters/abstractE}
+
+\SDUmainmatter
+
+%\input{./Chapters/chap0}
+\input{./Chapters/chap1}
+\input{./Chapters/chap2}
+\input{./Chapters/chap3}
+\input{./Chapters/conclusions}
+%\input{./Chapters/chap4}
+%\input{./Chapters/chap5}
+%\input{./Chapters/chap6}
+\SDUbackmatter
+
+\ereference{Reference}
+\bibliographystyle{SDUthesis}
+%\bibliographystyle{unsrt}
+\bibliography{thesisbib}
+
+\input{./Chapters/thanks}
+
+\input{./Chapters/publications}
+
+\end{document}

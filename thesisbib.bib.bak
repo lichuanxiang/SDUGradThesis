@@ -1,0 +1,688 @@
+
+@inproceedings{ZhangHW16MM,
+    title = {Play and rewind: {O}ptimizing binary representations of videos by self-supervised temporal hashing},
+    author = {Hanwang Zhang and Meng Wang and Richang Hong and Tat-Seng Chua},
+    booktitle = {Proceedings of ACM International Conference on Multimedia},
+    pages = {781--790},
+    year = {2016}
+}
+
+
+@article{ShenFM17TMM,
+    title = {Asymmetric binary coding for image search},
+    author = {Fumin Shen and Yang Yang and Li Liu and Wei Liu and Dacheng Tao and Heng Tao Shen},
+    journal = {IEEE Transactions on Multimedia},
+    volume = {19},
+    number = {9},
+    pages = {2022--2032},
+    year = {2017}
+}
+
+
+@article{SongJK18PR,
+    title = {Quantization-based hashing: {A} general framework for scalable image and video retrieval},
+    author = {Jingkuan Song and Lianli Gao and Li Liu and Xiaofeng Zhu and Nicu Sebe},
+    journal = {Pattern Recognition},
+    volume = {75},
+    pages = {175--187},
+    year = {2018}
+}
+
+@inproceedings{ZhangPF17MM,
+    title ={Semi-relaxation supervised hashing for cross-modal retrieval},
+    author = {Peng-Fei Zhang and Chuan-Xiang Li and Meng-Yuan Liu and Liqiang Nie and Xin-Shun Xu},
+    booktitle = {Proceedings of ACM International Conference on Multimedia},
+    pages = {1762--1770},
+    year = {2017}
+}
+
+@article{Andoni08Near,
+    title={Near-optimal hashing algorithms for approximate nearest neighbor in high dimensions},
+    author={Andoni, Alexandr and Indyk, Piotr},
+    journal={Communications of the ACM},
+    volume={51},
+    pages={117--122},
+    year={2008}
+}
+
+@inproceedings{hinton03stochastic,
+    title={Stochastic neighbor embedding},
+    author={Hinton, Geoffrey E and Roweis, Sam T},
+    booktitle={Proceedings of Advances in Neural Information Processing Systems},
+    pages={857--864},
+    year={2003}
+}
+
+@inproceedings{nie12Harvesting,
+    title={Harvesting visual concepts for image search with complex queries},
+    author={Nie, Liqiang and Yan, Shuicheng and Wang, Meng and Hong, Richang and Chua, Tat-Seng},
+    booktitle={Proceedings of ACM International Conference on Multimedia},
+    pages={59-68},
+    year={2012}
+}
+
+@article{Tang15Neighborhood,
+    title={Neighborhood discriminant hashing for large-scale image retrieval},
+    author={Tang, Jinhui and Li, Zechao and Wang, Meng and Zhao, Ruizhen},
+    journal={IEEE Transactions on Image Processing},
+    volume={24},
+    number={9},
+    pages={2827-2840},
+    year={2015}
+}
+
+@article{masci14multimodal,
+    title={Multimodal similarity-preserving hashing},
+    author={Masci, Jonathan and Bronstein, Michael M and Bronstein, Alexander M and Schmidhuber, J{\"u}rgen},
+    journal={IEEE Transactions on Pattern Analysis and Machine Intelligence},
+    volume={36},
+    number={4},
+    pages={824--830},
+    year={2014}
+}
+
+@inproceedings{gionis99lsh,
+    title={Similarity search in high dimensions via hashing},
+    author={Gionis, Aristides and Indyk, Piotr and Motwani, Rajeev},
+    booktitle={Proceedings of International Conference on Very Large Data Bases},
+    volume={99},
+    number={6},
+    pages={518--529},
+    year={1999}
+}
+
+@inproceedings{weiss09sh,
+    title={Spectral hashing},
+    author={Weiss, Yair and Torralba, Antonio and Fergus, Rob},
+    booktitle={Proceedings of Advances in Neural Information Processing Systems},
+    pages={1753--1760},
+    year={2009}
+}
+
+@inproceedings{liu2011agh,
+  title={Hashing with graphs},
+  author={Liu, Wei and Wang, Jun and Kumar, Sanjiv and Chang, Shih-Fu},
+  booktitle={Proceedings of the International Conference on Machine Learning},
+  pages={1--8},
+  year={2011}
+}
+
+@inproceedings{zhang2010self,
+  title={Self-taught hashing for fast similarity search},
+  author={Zhang, Dell and Wang, Jun and Cai, Deng and Lu, Jinsong},
+  booktitle={Proceedings of International ACM SIGIR Conference on Research and Development in Information Retrieval},
+  pages={18--25},
+  year={2010}
+}
+
+@inproceedings{gong11itq,
+    title={Iterative quantization: A procrustean approach to learning binary codes},
+    author={Yunchao Gong and Svetlana Lazebnik},
+    booktitle={Proceedings of IEEE International Conference on Computer Vision and Pattern Recognition},
+    pages={817-824},
+    year={2011}
+}
+
+@inproceedings{liu2014discrete,
+    title={Discrete graph hashing},
+    author={Liu, Wei and Mu, Cun and Kumar, Sanjiv and Chang, Shih-Fu},
+    booktitle={Advances in Neural Information Processing Systems},
+    pages={3419--3427},
+    year={2014}
+}
+
+@inproceedings{jiang2015scalable,
+  title={Scalable graph hashing with feature transformation},
+  author={Jiang, Qing-Yuan and Li, Wu-Jun},
+  booktitle={Proceedings of International Joint Conference on Artificial Intelligence},
+  pages={2248¨C-2254},
+  year={2015}
+}
+
+@inproceedings{zhang2014lfh,
+  title={Supervised hashing with latent factor models},
+  author={Zhang, Peichao and Zhang, Wei and Li, Wu-Jun and Guo, Minyi},
+  booktitle={Proceedings of the International ACM SIGIR Conference on Research and Development in Information Retrieval},
+  pages={173--182},
+  year={2014}
+}
+
+@inproceedings{lin2013tsh,
+  title={A general two-step approach to learning-based hashing},
+  author={Lin, Guosheng and Shen, Chunhua and Suter, David and Van Den Hengel, Anton},
+  booktitle={Proceedings of the IEEE international Conference on Computer Vision},
+  pages={2552--2559},
+  year={2013}
+}
+
+@article{Christoph12ldahash,
+    title={LDAHash: Improved matching with smaller descriptors},
+    author={Strecha, Christoph and Bronstein, Alex and Bronstein, Michael and Fua, Pascal},
+    journal={IEEE Transactions on Pattern Analysis and Machine Intelligence},
+    volume={44},
+    number={1},
+    pages={66--78},
+    year={2012}
+}
+
+@inproceedings{kulis09bre,
+    title={Learning to hash with binary reconstructive embeddings},
+    author={Kulis, Brian and Darrell, Trevor},
+    booktitle={Advances in Neural Information Processing Systems},
+    pages={1042--1050},
+    year={2009}
+}
+
+@inproceedings{liu12ksh,
+    title={Supervised hashing with kernels},
+    author={Liu, Wei and Wang, Jun and Ji, Rongrong and Jiang, Yu-Gang and Chang, Shih-Fu},
+    booktitle={Proceedings of IEEE International Conference on Computer Vision and Pattern Recognition},
+    pages={2074--2081},
+    year={2012}
+}
+
+@inproceedings{lin14fasthash,
+    title={Fast supervised hashing with decision trees for high-dimensional data},
+    author={Lin, Guosheng and Shen, Chunhua and Shi, Qinfeng and van den Hengel, Anton and Suter, David},
+    booktitle={Proceedings of IEEE International Conference on Computer Vision and Pattern Recognition},
+    pages={1963--1970},
+    year={2014}
+}
+
+@inproceedings{shen15sdh,
+    title={Supervised discrete hashing.},
+    author={Shen, Fumin and Shen, Chunhua and Liu, Wei and Shen, Heng Tao},
+    booktitle={Proceedings of IEEE International Conference on Computer Vision and Pattern Recognition},
+    pages={37--45},
+    year={2015}
+}
+
+@inproceedings{kang16cosdish,
+    author = {Kang, Wang-Cheng and Li, Wu-Jun and Zhou, Zhi-Hua},
+    title = {Column sampling based discrete supervised hashing},
+    booktitle = {Proceedings of AAAI Conference on Artificial Intelligence},
+    pages = {1230--1236},
+    year = {2016}
+}
+
+@inproceedings{xia14cnnh,
+    title={Supervised hashing for image retrieval via image representation learning},
+    author={Xia, Rongkai and Pan, Yan and Lai, Hanjiang and Liu, Cong and Yan, Shuicheng},
+    booktitle={Proceedings of AAAI Conference on Artificial Intelligence},
+    pages={2156--2162},
+    year={2014}
+}
+
+@inproceedings{li2015dpsh,
+  title={Feature learning based deep supervised hashing with pairwise labels},
+  author={Li, Wu-Jun and Wang, Sheng and Kang, Wang-Cheng},
+  booktitle={Proceedings of International Joint Conference on Artificial Intelligence},
+  pages={1711--1717},
+  year={2016}
+}
+
+@inproceedings{bronstein10cmssh,
+    title={Data fusion through cross-modality metric learning using similarity-sensitive hashing},
+    author={Bronstein, Michael M and Bronstein, Alexander M and Michel, Fabrice and Paragios, Nikos},
+    booktitle={Proceedings of IEEE International Conference on Computer Vision and Pattern Recognition},
+    pages={3594--3601},
+    year={2010}
+}
+
+@inproceedings{kumar11cvh,
+    title={Learning hash functions for cross-view similarity search},
+    author={Kumar, Shaishav and Udupa, Raghavendra},
+    booktitle={Proceedings of International Joint Conference on Artificial Intelligence},
+    pages={1360--1365},
+    year={2011}
+}
+
+@inproceedings{zhen2012crh,
+  title={Co-regularized hashing for multimodal data},
+  author={Zhen, Yi and Yeung, Dit-Yan},
+  booktitle={Advances in Neural Information Processing Systems},
+  pages={1376--1384},
+  year={2012}
+}
+
+@inproceedings{zhu13lcmh,
+    title={Linear cross-modal hashing for efficient multimedia search},
+    author={Zhu, Xiaofeng and Huang, Zi and Shen, Heng Tao and Zhao, Xin},
+    booktitle={Proceedings of ACM International Conference on Multimedia},
+    pages={143--152},
+    year={2013}
+}
+
+@inproceedings{song13imh,
+  title={Inter-media hashing for large-scale retrieval from heterogeneous data sources},
+  author={Song, Jingkuan and Yang, Yang and Yang, Yi and Huang, Zi and Shen, Heng Tao},
+  booktitle={Proceedings of ACM International Conference on Management of Data},
+  pages={785--796},
+  year={2013}
+}
+
+@inproceedings{zhang14scm,
+  title={Large-scale supervised multimodal hashing with semantic correlation maximization.},
+  author={Zhang, Dongqing and Li, Wu-Jun},
+  booktitle={Proceedings of AAAI Conference on Artificial Intelligence},
+  pages={2177--2183},
+  year={2014}
+}
+
+@inproceedings{zhouJ14LSSH,
+    title = {Latent semantic sparse hashing for cross-modal similarity search},
+    author = {Zhou, Jile and Ding, Guiguang and Guo, Yuchen},
+    booktitle = {Proceedings of International ACM SIGIR Conference on Research and Development in Information Retrieval},
+    pages = {415--424},
+    year = {2014}
+}
+
+@inproceedings{ding14cmfh,
+    title={Collective matrix factorization hashing for multimodal data},
+    author={Ding, Guiguang and Guo, Yuchen and Zhou, Jile},
+    booktitle={Proceedings of IEEE International Conference on Computer Vision and Pattern Recognition},
+    pages={2075--2082},
+    year={2014}
+}
+
+@inproceedings{lin15seph,
+    title={Semantics-preserving hashing for cross-view retrieval},
+    author={Lin, Zijia and Ding, Guiguang and Hu, Mingqing and Wang, Jianmin},
+    booktitle={Proceedings of IEEE International Conference on Computer Vision and Pattern Recognition},
+    pages={3864--3872},
+    year={2015}
+}
+
+@inproceedings{long16ccq,
+    title={Composite correlation quantization for efficient multimodal retrieval},
+    author={Long, Mingsheng and Cao, Yue and Wang, Jianmin and Yu, Philip S},
+    booktitle={Proceedings of International ACM SIGIR Conference on Research and Development in Information Retrieval},
+    pages={579--588},
+    year={2016}
+}
+
+@inproceedings{Liu16smfh,
+    title={Supervised matrix factorization for cross-modality hashing},
+    author={Liu, Hong and Ji, Rongrong and Wu, Yongjian and Hua, Gang},
+    booktitle={Proceedings of International Joint Conference on Artificial Intelligence},
+    pages={1767-1773},
+    year={2016}
+}
+
+@article{xu17dch,
+    title={Learning discriminative binary codes for large-scale cross-modal retrieval},
+    author={Xu, Xing and Shen, Fumin and Yang, Yang and Shen, Heng Tao and Li, Xuelong},
+    journal={IEEE Transactions on Image Processing},
+    volume={26},
+    number={5},
+    pages={2494--2507},
+    year={2017}
+}
+
+@inproceedings{rasiwasia10wiki,
+    title={A new approach to cross-modal multimedia retrieval},
+    author={Rasiwasia, Nikhil and Costa Pereira, Jose and Coviello, Emanuele and Doyle, Gabriel and Lanckriet, Gert RG and Levy, Roger and Vasconcelos, Nuno},
+    booktitle={Proceedings of ACM International Conference on Multimedia},
+    pages={251--260},
+    year={2010}
+}
+
+@inproceedings{huiskes08mir,
+    title={The {MIR} {F}lickr retrieval evaluation},
+    author={Huiskes, Mark J and Lew, Michael S},
+    booktitle={Proceedings of ACM International Conference on Multimedia Information Retrieval},
+    pages={39--43},
+    year={2008}
+}
+
+@inproceedings{chua09nus,
+    title={NUS-WIDE: {A} real-world web image database from national university of singapore},
+    author={Chua, Tat-Seng and Tang, Jinhui and Hong, Richang and Li, Haojie and Luo, Zhiping and Zheng, Yantao},
+    booktitle={Proceedings of ACM International Conference on Image and Video Retrieval},
+    pages={48},
+    year={2009}
+}
+
+
+@article{Deerwester1990lsa,
+    title={Indexing by latent semantic analysis},
+    author={Deerwester, Scott and Dumais, Susan T. and Furnas, George W. and Landauer, Thomas K. and Harshman, Richard},
+    journal={Journal of the American Society for Information Science},
+    volume={41},
+    number={6},
+    pages={391--407},
+    year={1990}
+}
+
+@article{Sch1966OPP,
+    title={A generalized solution of the Orthogonal Procrustes problem.},
+    author={Schonemann, Peter H},
+    journal={Psychometrika},
+    volume={31},
+    number={1},
+    pages={1--10},
+    year={1966}
+}
+
+@inproceedings{silpa08optkdtree,
+    title={Optimised KD-trees for fast image descriptor matching},
+    author={Silpa-Anan, Chanop and Hartley, Richard},
+    booktitle={Proceedings of IEEE International Conference on Computer Vision and Pattern Recognition},
+    pages={1--8},
+    year={2008}
+}
+
+@article{omohundro1987efficient,
+    title={Efficient algorithms with neural network behavior},
+    author={Omohundro, Stephen M},
+    journal={Complex Systems},
+    volume={1},
+    number={2},
+    pages={273--347},
+    year={1987}
+}
+
+@inproceedings{liu17fsh,
+    title={Cross-modality binary code learning via fusion similarity hashing},
+    author={Liu, Hong and Ji, Rongrong and Wu, Yongjian and Huang, Feiyue and Zhang, Baochang},
+    booktitle={Proceedings of IEEE International Conference on Computer Vision and Pattern Recognition},
+    pages={7380--7388},
+    year={2017}
+}
+
+@inproceedings{hu17bsh,
+    title={Bayesian supervised hashing},
+    author={Hu, Zihao and Chen, Junxuan and Lu, Hongtao and Zhang, Tongzhen},
+    booktitle={Proceedings of IEEE International Conference on Computer Vision and Pattern Recognition},
+    pages={6348--6355},
+    year={2017}
+}
+
+@inproceedings{wu15qch,
+    title={Quantized correlation hashing for fast cross-modal search.},
+    author={Wu, Botong and Yang, Qiang and Zheng, Wei-Shi and Wang, Yizhou and Wang, Jingdong},
+    booktitle={Proceedings of International Joint Conference on Artificial Intelligence},
+    pages={3946--3952},
+    year={2015}
+}
+
+
+@inproceedings{he13kmeanshash,
+    title={K-means hashing: An affinity-preserving quantization method for learning binary compact codes},
+    author={He, Kaiming and Wen, Fang and Sun, Jian},
+    booktitle={Proceedings of IEEE International Conference on Computer Vision and Pattern Recognition},
+    pages={2938--2945},
+    year={2013}
+}
+
+@inproceedings{zhen12probabilistic,
+    title={A probabilistic model for multimodal hash function learning},
+    author={Zhen, Yi and Yeung, Dit-Yan},
+    booktitle={Proceedings of ACM International Conference on Knowledge Discovery and Data Mining},
+    pages={940--948},
+    year={2012}
+}
+
+@inproceedings{wang10semi,
+    title={Semi-supervised hashing for scalable image retrieval},
+    author={Wang, Jun and Kumar, Sanjiv and Chang, Shih-Fu},
+    booktitle={Proceedings of IEEE International Conference on Computer Vision and Pattern Recognition},
+    pages={3424--3431},
+    year={2010}
+}
+
+@article{ding2016scmfh,
+    title={Large-scale cross-modality search via collective matrix factorization hashing},
+    author={Ding, Guiguang and Guo, Yuchen and Zhou, Jile and Gao, Yue},
+    journal={IEEE Transactions on Image Processing},
+    volume={25},
+    number={11},
+    pages={5427--5440},
+    year={2016}
+}
+
+@inproceedings{wang2017acmr,
+    title={Adversarial cross-modal retrieval},
+    author={Wang, Bokun and Yang, Yang and Xu, Xing and Hanjalic, Alan and Shen, Heng Tao},
+    booktitle={Proceedings of AAAI Conference on Artificial Intelligence},
+    pages={154--162},
+    year={2017}
+}
+
+@inproceedings{jiang2017dcmh,
+    title={Deep cross-modal hashing},
+    author={Jiang, Qing-Yuan and Li, Wu-Jun},
+    booktitle={Proceedings of IEEE Conference on Computer Vision and Pattern Recognition},
+    pages={3270-3278},
+    year={2017}
+}
+
+@inproceedings{cao2016dvsh,
+    title={Deep visual-semantic hashing for cross-modal retrieval},
+    author={Cao, Yue and Long, Mingsheng and Wang, Jianmin and Yang, Qiang and Yu, Philip S},
+    booktitle={Proceedings of ACM International Conference on Knowledge Discovery and Data Mining},
+    pages={1445--1454},
+    year={2016}
+}
+
+
+@inproceedings{ken14cnnf,
+    title={Return of the devil in the details: Delving deep into convolutional nets},
+    author={Chatfield, Ken and Simonyan, Karen and Vedaldi, Andrea and Zisserman, Andrew},
+    booktitle={Proceedings of British Machine Vision Conference},
+    pages={1--11},
+    year={2014}
+}
+
+@inproceedings{yang2016zero,
+    title={Zero-shot hashing via transferring supervised knowledge},
+    author={Yang, Yang and Luo, Yadan and Chen, Weilun and Shen, Fumin and Shao, Jie and Shen, Heng Tao},
+    booktitle={Proceedings of ACM International Conference on Multimedia},
+    pages={1286--1295},
+    year={2016}
+}
+
+@article{wang2015facilitating,
+    title={Facilitating image search with a scalable and compact semantic mapping},
+    author={Wang, Meng and Li, Weisheng and Liu, Dong and Ni, Bingbing and Shen, Jialie and Yan, Shuicheng},
+    journal={IEEE Transactions on Cybernetics},
+    volume={45},
+    number={8},
+    pages={1561--1574},
+    year={2015}
+}
+
+@article{liu2016query,
+    title={Query-adaptive reciprocal hash tables for nearest neighbor search},
+    author={Liu, Xianglong and Deng, Cheng and Lang, Bo and Tao, Dacheng and Li, Xuelong},
+    journal={IEEE Transactions on Image Processing},
+    volume={25},
+    number={2},
+    pages={907--919},
+    year={2016}
+}
+
+@inproceedings{wang2016linear,
+    title={Linear distance preserving pseudo-supervised and unsupervised hashing},
+    author={Wang, Min and Zhou, Wengang and Tian, Qi and Zha, Zhengjun and Li, Houqiang},
+    booktitle={Proceedings of ACM International Conference on Multimedia},
+    pages={1257--1266},
+    year={2016}
+}
+
+@article{Chen2017Predicting,
+    title={Predicting microblog sentiments via weakly supervised multi-modal deep learning},
+    author={Chen, Fuhai and Ji, Rongrong and Su, Jinsong and Cao, Donglin and Gao, Yue},
+    journal={IEEE Transactions on Multimedia},
+    volume={20},
+    pages={997--1007},
+    year={2017}
+}
+
+@article{wang2018survey,
+    title={A survey on learning to hash},
+    author={Wang, Jingdong and Zhang, Ting and Sebe, Nicu and Shen, Heng Tao and others},
+    journal={IEEE Transactions on Pattern Analysis and Machine Intelligence},
+    volume={40},
+    number={4},
+    pages={769--790},
+    year={2018}
+}
+
+@inproceedings{luo2018sdmch,
+  title={SDMCH: {S}upervised discrete manifold-embedded cross-modal hashing},
+  author={Luo, Xin and Yin, Xiao-Ya and Nie, Liqiang and Song, Xuemeng and Wang, Yongxin and Xu, Xin-Shun},
+  booktitle={Proceedings of International Joint Conference on Artificial Intelligence},
+  pages={2518--2524},
+  year={2018}
+}
+
+@inproceedings{luo2018fast,
+  title={Fast scalable supervised hashing},
+  author={Luo, Xin and Nie, Liqiang and He, Xiangnan and Wu, Ye and Chen, Zhen-Duo and Xu, Xin-Shun},
+  booktitle={Proceedings of International ACM SIGIR Conference on Research and Development in Information Retrieval},
+  pages={735--744},
+  year={2018}
+}
+
+@inproceedings{luo2018scalable,
+  title={Scalable supervised discrete hashing for large-scale search},
+  author={Luo, Xin and Wu, Ye and Xu, Xin-Shun},
+  booktitle={Proceedings of the International World Wide Web Conference},
+  pages={1603--1612},
+  year={2018}
+}
+
+@inproceedings{chen2018ddcmh,
+  title={Dual Deep Neural Networks Cross-Modal Hashing},
+  author={Chen, Zhen-Duo and Yu, Wan-Jin and Li, Chuan-Xiang and Nie, Liqiang and Xu, Xin-Shun},
+  booktitle={Proceedings of AAAI Conference on Artificial Intelligence},
+  pages={274--281},
+  year={2018}
+}
+
+@article{Song2013Effective,
+  title={Effective Multiple Feature Hashing for Large-Scale Near-Duplicate Video Retrieval},
+  author={Song, Jingkuan and Yang, Yi and Huang, Zi and Shen, Heng Tao and Luo, Jiebo},
+  journal={IEEE Transactions on Multimedia},
+  volume={15},
+  number={8},
+  pages={1997--2008},
+  year={2013}
+}
+
+@article{Song2014Robust,
+  title={Robust hashing with local models for approximate similarity search},
+  author={Song, Jingkuan and Yang, Yi and Li, Xuelong and Huang, Zi and Yang, Yang},
+  journal={IEEE Transactions on Cybernetics},
+  volume={44},
+  number={7},
+  pages={1225--1236},
+  year={2014}
+}
+
+@inproceedings{yan2016srdmh,
+  title={Supervised Robust Discrete Multimodal Hashing for Cross-Media Retrieval},
+  author={Ting-Kun Yan and Xin-Shun Xu and Shanqing Guo and Zi Huang and Xiaolin Wang},
+  booktitle={Proceedings of ACM International Conference on Information and Knowledge Management},
+  pages={1271--1280},
+  year={2016}
+}
+
+@article{Wang2016luh,
+  title={Linear unsupervised hashing for ANN search in Euclidean space},
+  author={Wang, Jian and Xu, Xin-Shun and Guo, Shanqing and Cui, Lizhen and Wang, Xiao-Lin},
+  journal={Neurocomputing},
+  volume={171},
+  pages={283--292},
+  year={2016},
+}
+
+@inproceedings{xu2016Dictionary,
+  title={Dictionary Learning Based Hashing for Cross-Modal Retrieval},
+  author={Xu, Xin-Shun},
+  booktitle={Proceedings of ACM International Conference on Multimedia},
+  pages={177--181},
+  year={2016},
+}
+
+@inproceedings{Yang2017dmvh,
+  title={Discrete Multi-view Hashing for Effective Image Retrieval},
+  author={Yang, Rui and Shi, Yuliang and Xu, Xin-Shun},
+  booktitle={Proceedings of ACM International Conference on Multimedia Retrieval},
+  pages={175--183},
+  year={2017}
+}
+
+@inproceedings{Huang2017scmh,
+  title={Supervised cross-modal hashing without relaxation},
+  author={Huang, Hua-Junjie and Yang, Rui and Li, Chuan-Xiang and Shi, Yuliang and Guo, Shanqing and Xu, Xin-Shun},
+  booktitle={Proceedings of IEEE International Conference on Multimedia and Expo},
+  pages={1159-1164},
+  year={2017},
+}
+
+@article{mirsky1975trace,
+  title={A trace inequality of John von Neumann},
+  author={Mirsky, Leon},
+  journal={Monatshefte f{\"u}r mathematik},
+  volume={79},
+  number={4},
+  pages={303--306},
+  year={1975}
+}
+
+@article{altman1992knn,
+  title={An introduction to kernel and nearest-neighbor nonparametric regression},
+  author={Altman, Naomi S},
+  journal={The American Statistician},
+  volume={46},
+  number={3},
+  pages={175--185},
+  year={1992}
+}
+
+@article{bentley1975kdtree,
+  title={Multidimensional binary search trees used for associative searching},
+  author={Bentley, Jon Louis},
+  journal={Communications of the ACM},
+  volume={18},
+  number={9},
+  pages={509--517},
+  year={1975}
+}
+
+@inproceedings{hartley2008okdtree,
+  title={Optimised KD-trees for fast image descriptor matching},
+  author={SilpaAnan, Chanop and Hartley, Richard},
+  booktitle={Proceedings of IEEE Conference on Computer Vision and Pattern Recognition},
+  year={2008}
+}
+
+@inproceedings{guttman1984r,
+  title={R-trees: a dynamic index structure for spatial searching},
+  author={Guttman, Antonin},
+  booktitle={Proceedings of SIGMOD Conference},
+  pages={47--57},
+  year={1984}
+}
+
+@article{finkel1974quad,
+  title={Quad trees a data structure for retrieval on composite keys},
+  author={Finkel, Raphael A. and Bentley, Jon Louis},
+  journal={Acta informatica},
+  volume={4},
+  number={1},
+  pages={1--9},
+  year={1974}
+}
+
+@article{wang2014trinary,
+  title={Trinary-projection trees for approximate nearest neighbor search},
+  author={Wang, Jingdong and Wang, Naiyan and Jia, You and Li, Jian and Zeng, Gang and Zha, Hongbin and Hua, Xian-Sheng},
+  journal={IEEE Transactions on Pattern Analysis and Machine Intelligence},
+  volume={36},
+  number={2},
+  pages={388--403},
+  year={2014}
+}

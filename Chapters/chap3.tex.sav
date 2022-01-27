@@ -1,0 +1,488 @@
+\chapter{\quad\quad 可扩展监督离散哈希}
+\label{chap3}
+\echapter{Scalable Supervised Discrete Hashing}
+
+
+
+\section{引言}
+\esection{Motivation}
+
+111
+
+
+
+
+\section{可扩展监督离散哈希}
+\esection{Scalable Supervised Discrete Hashing}
+
+\subsection{符号和问题描述}
+\esubsection{Notations and Problem Definition}
+
+假定有$n$个标记样本$\textbf{x}_i\in\mathbb{R}^d$ ($i = 1, 2,...,n$)，且$\textbf{y}_i\in\{0,1\}^c$ ($i = 1, 2,...,n$)是样本对应的标签向量。其中，$d$是样本特征空间的维数，$c$是类别数量。对应地，$\textbf{X}\in\mathbb{R}^{n\times d}$和$\textbf{Y}\in\{0,1\}^{n\times c}$分别是数据的特征矩阵和类别标签矩阵。且$\textbf{Y}_{ik}=1$意味着样本$x_i$属于第$k$个类；反之，若其不属于该类别$k$，则有$\textbf{Y}_{ik}=0$。我们使用$\textbf{S}\in\{-1,1\}^{n\times n}$代表样本间成对的相似性矩阵，且当第$i$个和第$j$个样本是语义上相似的（不相似的），有$\textbf{S}_{ij}=1$（$\textbf{S}_{ij}=-1$）。和现有的相关方法一致，我们假设$\sum^n_{i=1} \textbf{x}_i=0$成立。
+
+我们在本章中要设计一个哈希模型，其可以为所有的样本均生成对应的哈希码。我们用$\textbf{B}\in \{-1,1\}^{n\times r}$来表示$n$个样本的哈希码构成的哈希码矩阵，且$\textbf{b}_i\in\{-1,1\}^r$表示第$i$个样本的哈希码。对于这$n$个样本外的查询数据，我们要给出相应的哈希函数$\textbf{B}_{query}=F(\textbf{X}_{query})=sgn(\textbf{X}_{query}\textbf{W})$，从而为这些查询数据生成其哈希码$\textbf{B}_{query}$。其中$\textbf{W}$是哈希投影矩阵，$sgn(\cdot)$是元素级别的符号函数（定义为：在$x\geq 0$ 时$sgn(x)=1$；在$x<0$时$sgn(x)=-1$）。
+
+
+\subsection{目标函数}
+\esubsection{Objective Function}
+
+对于监督哈希方法来说，使用监督信息是关键的地方。监督信息的使用方式有多种，但其中最常用的便是如下的形式\cite{liu2012supervised,lin2013general,zhang2014supervised,lin2014fast,kang2016column} ：
+\begin{equation}\label{ssdheq1}
+\begin{split}
+   &  \min_\textbf{B}\parallel r \textbf{S}  -\textbf{B} \textbf{B}^\top   \parallel_F^2,\\
+   & s.t. \ \ \ \textbf{B}\in\{-1,1\}^{n\times r}，
+\end{split}
+\end{equation}	
+其中，$\parallel \cdot \parallel_F$是Frobenius范数。公式\ref{ssdheq1}利用了哈希码的内积来近似相似性，且哈希码的内积可以反映哈希码之间的海明距离\cite{liu2012supervised}，从而可以保证相似（不相似）的样本，其哈希码也是相似（不相似）的。然而，正如前文所说，引公式\ref{ssdheq1}有一个明显的不足：当样本数量$n$很大的时候，优化该问题会很耗时。
+
+为了解决这个问题，我们提出了如下的损失函数：
+\begin{equation}\label{ssdheq2}
+\begin{split}
+   &  \min_{\textbf{B},\textbf{G}}\parallel r \textbf{S}  -\textbf{B} (\textbf{Y}\textbf{G})^\top   \parallel_F^2 + \mu \parallel \textbf{B}  -\textbf{Y}\textbf{G}   \parallel_F^2\\
+   & s.t. \ \ \ \textbf{B}\in\{-1,1\}^{n\times r},
+\end{split}
+\end{equation} 	
+其中,$\mu$是参数，并且我们引入了两个矩阵$\textbf{Y}$和$\textbf{G}$。$\textbf{Y}$是样本的标签矩阵，$\textbf{G}$ 是从标签空间到哈希码空间的映射矩阵。
+
+之所以如此设计公式\ref{ssdheq2}，是因为如下的几点好处。1）首先，我们在学习哈希码时使用了不止一种监督信息，这样会让哈希码更加的准确。2）相对于公式\ref{ssdheq1}，我们使用了实值$\textbf{YG}$的来替代二值的$\textbf{B}$，这样做可以更好地近似$\textbf{S}$\cite{da2017amvh}。3）我们使用替代公式\ref{ssdheq1}中的一个$\textbf{B}$，这样做的另一个好处是，我们可以巧妙地避免在优化中直接使用$\textbf{S}$（我们将在随后的章节里详细介绍）。
+
+
+\subsection{优化算法}
+\esubsection{Optimization}
+
+
+在本节中，我们将详细介绍如何求解公式\ref{ssdheq2}中的问题。该问题共有两个未知量需要求解，因此，我们采用迭代的轮流优化策略。具体来说，整个算法将迭代多次，直到收敛，且在每一次迭代中，都含有两个交替优化步骤：1）固定$\textbf{B}$来求解$\textbf{G}$；2）固定$\textbf{G}$来求解$\textbf{B}$。
+
+\subsubsection{固定$\textbf{B}$求解$\textbf{G}$}
+\esubsubsection{Updating $\textbf{G}$ by Fixing $\textbf{B}$}
+
+当固定$\textbf{B}$的时候，我们可以发现关于$\textbf{G}$的问题存在闭解。我们对公式\ref{ssdheq2}求关于$\textbf{G}$的偏导，并使之取值为零，进而我们得到解：
+\begin{equation}\label{ssdheq3}
+   \textbf{G}=(\textbf{Y}^\top \textbf{Y})^{-1}(r(\textbf{SY})^\top  \textbf{B}+ \mu \textbf{Y}^\top \textbf{B})(\textbf{B}^\top \textbf{B} +\mu \textbf{I}_{r\times r})^{-1} .
+\end{equation}
+如果我们在求解的时候直接使用$\textbf{S}$，且当$n$很大的时候，会造成巨大的空间和时间消耗。仔细观察发现，我们可以预先计算$\textbf{SY}$，并在优化的时候直接使用$\textbf{SY}$而不需要使用$\textbf{S}$。在此，我们用$\textbf{A}$来替代$\textbf{SY}$，从而可以把上式写成：
+\begin{equation}\label{ssdheq4}
+   \textbf{G}=(\textbf{Y}^\top \textbf{Y})^{-1}(r\textbf{A}^\top  \textbf{B}+ \mu \textbf{Y}^\top \textbf{B})(\textbf{B}^\top \textbf{B} +\mu \textbf{I}_{r\times r})^{-1},
+\end{equation}
+我们可以发现，$\textbf{A}$的大小为$n\times c$，$c$是类别数且远小于样本数$n$。因此，在优化的时候直接使用$\textbf{SY}$而非$\textbf{S}$，可以避免巨大的时空消耗。
+
+
+\subsubsection{固定$\textbf{G}$求解$\textbf{B}$}
+\esubsubsection{Updating $\textbf{B}$ by Fixing $\textbf{G}$}
+
+对于固定$\textbf{G}$求解$\textbf{B}$的问题，我们使用离散循环坐标下降方法。首先，我们把公式\ref{ssdheq2}写成迹的形式，并省略常数项：
+\begin{equation}\label{ssdheq5}
+\begin{split}
+   &  \min_{\textbf{B}}  \parallel  \textbf{YGB}^\top\parallel_F^2- 2Tr(\textbf{B}^\top \textbf{SYG}+\mu \textbf{B}^\top \textbf{YG}))\\
+   &  \ \ \ \ \ =\parallel \textbf{YGB}^\top\parallel_F^2- 2Tr(\textbf{B}^\top(\textbf{AG}+\mu \textbf{YG}))\\
+   & \ \ \ \ \ =\parallel \textbf{CB}^\top\parallel_F^2 - 2Tr(\textbf{B}^\top \textbf{Q})\\
+   & s.t. \ \ \ \textbf{B}\in\{-1,1\}^{n\times r},
+\end{split}
+\end{equation}
+其中，$\textbf{A}=\textbf{SY}$，$\textbf{C}=\textbf{YG}$且$\textbf{Q}=\textbf{AG}+\mu \textbf{C}$。然后，我们按位优化哈希码，也就是说，我们在求解哈希码的当前列的时候固定其他列，依次迭代地优化所有列的哈希码。首先，我们用$\textbf{b}$表示哈希码矩阵$\textbf{B}$的第$l$列，即$\textbf{b}$是由所有样本的第$l$位哈希码组成的向量。我们用$\textbf{B}'$ 表示不包含$\textbf{b}$的矩阵$\textbf{B}$。同样地，用$\textbf{q}$表示矩阵$\textbf{Q}$的第$l$行，用$\textbf{Q}'$表示不包含$\textbf{q}$的矩阵$\textbf{Q}$；用$\textbf{c}$表示矩阵$\textbf{C}$的第$l$行，用$\textbf{C}'$表示不包含$\textbf{c}$的矩阵$\textbf{C}$。
+
+此时，我们可以得到：
+\begin{equation}\label{ssdheq6}
+\begin{split}
+   &  \parallel \textbf{CB}^\top\parallel_F^2= Tr(\textbf{BC}^\top \textbf{CB}^\top)\\
+   &  \quad \quad \quad \quad  \ \ = \parallel \textbf{bc}  \parallel_F^2 + 2\textbf{cC}'\textbf{B}'^\top \textbf{b} +const\\
+   & \quad \quad \quad \quad  \ \ =2\textbf{c}^\top \textbf{C}'\textbf{B}'^\top \textbf{b} +const.\\
+\end{split}
+\end{equation}	
+其中，$\parallel \textbf{bc}  \parallel_F^2=Tr(\textbf{c}^\top \textbf{b}^\top \textbf{b} \textbf{c})=n \textbf{c}^\top \textbf{c}=const$是常数项。对应地，我们有：
+\begin{equation}\label{ssdheq7}
+2Tr(\textbf{B}^\top \textbf{Q})= \textbf{q}^\top \textbf{b}+const.
+\end{equation}
+基于公式\ref{ssdheq6}和公式\ref{ssdheq7}，我们可以把求解$\textbf{B}$的优化问题化简为：
+\begin{equation}\label{ssdheq8}
+\begin{split}
+   & \min _\textbf{c} \quad (\textbf{c}^\top \textbf{C}'\textbf{B}'^\top+ \textbf{q}^\top)\textbf{b} \\
+   &  s.t. \quad \textbf{b}\in\{-1,1\}^n. \\
+\end{split}
+\end{equation}
+上式的最优解为：
+\begin{equation}\label{ssdheq9}
+ \textbf{b}=sgn(\textbf{q}-\textbf{B}'\textbf{C}'^\top \textbf{c}).
+ \end{equation}
+我们可以发现，每一位的哈希码都是基于除此之外别的位的哈希码学得的。我们迭代地更新所有位的哈希码，直到可以获得很好的一组哈希码。
+
+以上的方法可以使问题得到求解。下面我们进一步地介绍另一种方法来求解公式\ref{ssdheq2}关于$\textbf{B}$ 的子问题。受到启发\cite{kang2016column}，我们可以把公式\ref{ssdheq2}中第一项的Frobenius范数换成$L_1$范数，从而求解一个近似问题：
+\begin{equation}\label{ssdheq10}
+ \min_{\textbf{B}}\parallel r \textbf{S}  -\textbf{B} (\textbf{YG})^\top   \parallel_1, \quad s.t., \textbf{B}\in\{-1,1\}^{n\times r}.
+\end{equation}
+上式的解为$\textbf{B}=sgn(\textbf{SYG})$。通过观察可知，当样本是单标签的时候，$sgn(\textbf{SYG})$的值等于$sgn(\textbf{YG})$的值。因此，对于公式\ref{ssdheq2}中的第一项，$\textbf{B}=sgn(\textbf{YG})$是其的解。而公式\ref{ssdheq2}中的第二项，我们可以发现其解同为$\textbf{B}=sgn(\textbf{YG})$。
+因此，对于单标签数据来说，我们有一个近似解：
+\begin{equation}\label{ssdheq11}
+ \textbf{B}=sgn(\textbf{YG}).
+\end{equation}
+而对于多标签数据来说，因为$sgn(\textbf{SYG})$的值不等于$sgn(\textbf{YG})$的值，故无法用公式\ref{ssdheq11} 来求解，所以我们仍用离散循环坐标下降方法来求解。
+
+离散循环坐标下降方法采用的是按位优化哈希码的策略，随着哈希码位数$r$的增加，优化所消耗的时间会有较为显著的增加。而近似解是一步优化所有位的哈希码，因此哈希码位数的变化不会造成显著的时间消耗的变化。且在位数相同的情况下，前一种按位优化的方法通常会比后一种一步优化所有位的方法更耗时。我们将在实验部分具体分析。
+
+%\begin{algorithm}[t] \caption{Discrete optimization in SSDH.}
+%\KwIn{$\textbf{A}=\textbf{SY}$, which is computed offline; the label matrix $ \textbf{Y}\in \{0,1\}^{n\times c}$; the parameter $\mu$; the iteration number $t$; the hash bit length $r$.}%输入参数
+%\KwOut{Hash codes $\textbf{B}\in\{-1,1\}^{n\times r}$; the projection matrix $\textbf{G}$.}%输出
+%Initialize $\textbf{G}$ and $\textbf{B}$ by randomization.\\
+%\For{$iter=1 \to t$}{
+%Update $\textbf{G}$ by fixing $\textbf{B}$, using Eq. (\ref{opt2}).\\
+%\If{single-label}{
+%Update $\textbf{B}$ by fixing $\textbf{G}$, using Eq. (\ref{opt1-2}).
+%}\If{multi-label}{
+% Update $\textbf{B}$ by fixing $\textbf{G}$, using Eq. (\ref{optb2-5}).
+%}
+%}\end{algorithm}
+
+
+
+\subsection{样本外扩展}
+\esubsection{Out-of-sample Extension}
+
+我们已经获得了训练数据的哈希码，对于训练数据外的查询样本，我们需要使用哈希函数为他们生成其对应的哈希码。此处，我们采用两步哈希的策略，基于已经学到的样本的哈希码和其特征，采用线性回归的方式，学出哈希函数。
+通过优化如下的损失函数：
+\begin{equation}\label{ssdheq12}
+L_e = \parallel \textbf{B}-\textbf{XW} \parallel^2_F + \lambda_e \parallel  \textbf{W}\parallel^2_F,
+\end{equation}
+我们可以得到哈希投影矩阵的最优解：
+\begin{equation}\label{ssdheq13}
+\textbf{W}=(\textbf{X}^\top \textbf{X}+ \lambda_e \textbf{I})^{-1}\textbf{X}^\top \textbf{B}.
+\end{equation}
+其中，$\lambda_e$是参数，$\parallel  \textbf{W}\parallel^2_F$是正则化项。
+假设$X_{query}$和$B_{query}$分别是查询数据的原始特征和他们要学到的哈希码，则我们可以用如下的式子求出$B_{query}$：
+\begin{equation}\label{ssdheq14}
+\textbf{B}_{query}=F(\textbf{X}_{query})=sgn(\textbf{X}_{query}\textbf{W}).
+\end{equation}
+
+
+\subsection{核化}
+\esubsection{Kernelization}
+
+核化技术在哈希学习领域中有着广泛的应用\cite{da2017amvh,gui2018fast,huang2016class,liu2012supervised,shen2015supervised}。通过引入这项技术，模型可以更好的捕捉原始特征中的非线性结构。在实现我们的模型的时候，我们也采用了核化技术，并且使用的是RBF核函数。具体地，我们随机抽取$m$个点作为锚点，${\textbf{o}_1, \textbf{o}_2, \cdots, \textbf{o}_m}$。通过$\phi(x)=[exp({\parallel \textbf{x}- \textbf{o}_1 \parallel^{2}}/{\sigma}),\cdots ,exp({\parallel \textbf{x}-\textbf{o}_m \parallel^{2}}/{\sigma})]$可以把每一个数据样本映射成$m$维的核特征。这里的$\sigma$是通过对训练样本之间的欧式距离取均值得到的，且我们的$m$取值为1000。
+从而，哈希投影矩阵的最优解变为：
+\begin{equation}\label{ssdheq13}
+\textbf{W}=(\phi(\textbf{X})^\top \phi(\textbf{X})+ \lambda_e \textbf{I})^{-1}\phi(\textbf{X})^\top \textbf{B}.
+\end{equation}
+同时，公式\ref{ssdheq14}变为：
+\begin{equation}\label{ssdheq14}
+\textbf{B}_{query}=sgn(\phi(\textbf{X}_{query})\textbf{W}).
+\end{equation}
+
+
+
+\section{实验描述和结果分析}
+\esection{Experiments}
+
+在本节中，我们在六个常用数据集上进行了详尽的实验。同时，为了客观的考察我们的方法，我们选取多种现有方法作为基准方法来与我们的方法做比较。
+
+
+\subsection{数据集}
+\esubsection{Datasets}
+
+\textbf{MNIST数据集}\cite{lecun1998gradient}:这个数据集包括了$70000$张图片，是更大的数据集NIST的一个子集。该数据集中的图片是数字“0”到数字“9”的手写体，且每张图片只包含一个手写数字。因此，这个数据集是一个单标签数据集，且共有$10$个类别。在本章节的实验中，每张图片都用$784$维的特征向量来表示。
+
+\textbf{MIRFlickr数据集}\cite{huiskes2008mir}：此数据集中的图片均来自于真实世界的图片网站Flickr。该数据集一共有$25000$张图片，且该数据集共有$24$个类别标签。依据现有工作的设定\cite{lin2015semantics,xu2017learning}，我们过滤掉不属于任何类别的数据或是那些文本标签出现次数少于$20$次的数据，从而剩下$16738$ 张图片。在实验中，我们把图片用$150$维的边缘直方图表示。
+
+\textbf{CIFAR-10数据集}\cite{krizhevsky2009learning}：该数据集包含了$60000$张图片，每张图片属于且只属于一个类别。该数据集共含有$10$个类别，且每个类别含有的图片数量相同。在本章节中，为了使用该数据集，我们为每一张图片提取了一个$512$维的GIST特征引用引用。
+
+\textbf{CIFAR-100数据集}\cite{krizhevsky2009learning}:这个数据集共有$100$个类，每个类$600$张，共计$60000$张图片。同CIFAR-10一样，$512$维的GIST特征引用引用被用来表示图片。
+
+\textbf{NUS-WIDE数据集}\cite{chua2009nus}：这个数据集同样是从真实世界的图片网站Flickr上收集得到。最初含有$269648$张图片，在我们的实验设置中，为了与现有工作\cite{shen2015supervised}一致，我们只保留出现次数最多的$21$个类别及其对应的$195834$张图片。其中，每张图片都被表示为一个$500$维的bag-of-words特征。
+
+\textbf{ImageNet数据集}\cite{russakovsky2015imagenet}:这是一个包含约$120$万张图片的大规模的数据集，同时也是ImageNet大规模视觉识别挑战赛（ILSVRC2010）的训练集。该数据集共有$1000$个类别，每个类别有至少$600$张图片。我们使用挑战赛官方公布的$1000$维的词袋特征来表示图片。
+
+对于MNIST，MIRFlickr，CIFAR-10和CIFAR-100这四个数据集，我们随机抽取$1000$个样本作为实验的测试数据，剩下的样本作为训练集。对于NUS-WIDE，我们从每一个类中随机抽取$100$个样本，共计$2100$张图片，作为测试集。对于ImageNet数据集，其中$5\%$的图片被随机选取作为测试集。
+
+对于单标签数据集，如果两个样本对应的标签相同，则这两个样本是相似的；反之，这两个样本不相似。对于多标签数据集，如果两个样本共享至少一个类别，则他们相似；弱两个样本没有共同的类别，那么这两个样本不相似。
+表\ref{dataset}列出了上述数据集的一些相关数据。
+
+\begin{table}\centering\small%\scriptsize
+\caption{实验中数据集的相关数据。}\label{dataset}
+\begin{tabular}{|c|c|c|c|c|c|c|c|} \hline
+{数据集}  & {标签类型}  & {训练数据数量} & {测试数据数量} & {类别数} \\ \hline
+\ {MNIST}  & {单标签}  & 69,000 &1,000  &10 \\\hline
+\ {MIRFlickr}  & {多标签}  &15,738 & 1,000 &24 \\\hline
+\ {CIFAR-10}  & {单标签}  & 59,000 &1,000 &10 \\\hline
+\ {CIFAR-100}  & {单标签}  &59,000 & 1,000 &100 \\\hline
+\ {NUS-WIDE}  & {多标签} &193,833 & 2,100 &21\\\hline
+\ {ImageNet}  & {单标签}  &1,198,336 & 63,070 &1,000\\\hline\end{tabular}\end{table}
+
+
+
+\subsection{对比方法及实验细节}
+\esubsection{Baselines and Implementation Details}
+
+我们选择7种现有方法来进行实验比较。这些方法包括Locality-Sensitive Hashing（LSH）\cite{gionis1999similarity}、Iterative Quantization（ITQ）\cite{gong2013iterative}、Supervised Hashing with Kernels（KSH）\cite{liu2012supervised}、Supervised Discrete Hashing （SDH）\cite{shen2015supervised}、Natural Supervised Hashing（NSH）\cite{liu2016natural}、Fast Supervised Discrete Hashing（FSDH）\cite{gui2018fast}和Column Sampling Based Discrete Supervised Hashing（COSDISH）\cite{kang2016column}。 其中，前两种方法属于无监督哈希，后五种都是监督哈希模型。
+
+对于除NSH和FSDH之外的方法，我们使用其原作者提供的代码。因为NSH和FSDH的代码暂未公开，所以我们依据其论文中的描述自行实现了这两个模型的代码。所有方法的参数均按照其论文中的建议设置。此外，因为KSH的计算复杂度较高，依据领域中的相关论文\cite{shen2015supervised,kang2016column}，我们只用随机从训练集中采样出来的$2000$张图来训练这个模型。
+
+对于我们的方法，其参数设置如下：$t=5$，$\mu=1$且$\lambda_e=1$。
+
+所有实验均进行多次，并且每次都随机采样训练和测试集。最终的实验结果是在多次实验的基础上取平均值得到。
+
+实验环境是一台服务器，该机器的相关信息如下：Intel(R) XEON(R) CPU E5-2650@2.30GHz，128GB内存。
+
+
+
+\subsection{评价指标}
+\esubsection{Evaluation Metrics}
+
+依据领域内相关工作，我们采用三种被广泛使用的评价标准：均值平均精度（mean average precision MAP）、前N准确率曲线（top-N precision curves）和准确率-召回率曲线（precision recall curves）。对这三种标准来说，数值越大表明检索的效果越好。
+
+给定一个查询数据，平均精度（average precision AP）定义如下：
+\begin{equation}
+AP= \frac{1}{R}\sum_{r=1}^nPrecision(r)\delta(r)
+\end{equation}
+其中，$R$是该查询样本在待检索数据库（训练集）中真实近邻的数量，$n$是待检索数据库（训练集）的数据量，$Precision(r)$ 代表着前$r$个返回样本的准确度，当第$r$个返回样本是该查询样本的真实近邻的时候$\delta(r)$等于$1$，当第$r$个返回样本不是该查询样本的真实近邻的时候$\delta(r)$等于$0$。真实近邻的定义和前文中一致，即：如果返回的样本和查询样本对应的类别一致，该返回样本是查询样本的近邻，反之则不是近邻。把所有查询样本组成的查询集合（测试集）称为$Q$，均值平均精度即$Q$中所有样本的平均精度的均值：
+\begin{equation}
+MAP=\frac{1}{Q}\sum_{i=1}^Q AP_i.
+\end{equation}
+
+前N准确率曲线可以反映出准确率随着返回的样本数量变化的情况，该指标在检索领域是十分有效的。
+
+在进行检索的时候，会计算查询样本的哈希码和待检索数据库中所有样本哈希码的海明距离，通过变化海明半径，可以给出不同的返回样本。基于不同的海明半径，我们可以得到对应的精确度和召回率，从而得到准确率-召回率曲线。
+
+
+\subsection{结果比较}
+\esubsection{Comparison Results}
+
+\subsubsection{均值平均精度和时间比较}
+\esubsubsection{MAP and Time}
+
+
+
+\begin{table*}[t]\footnotesize\center
+\caption{数据集MNIST上的结果。位数相同情况下最好的MAP结果被加粗显示。}\label{tablemnist}
+\begin{tabular}{cccccc|ccccc}\hline
+  & \multicolumn{5}{c|}{MAP} &  \multicolumn{5}{c}{训练时间（单位：秒）}\\\hline
+ Method  &8 bits &16 bits &32 bits &64 bits &96 bits &8 bits &16 bits &32 bits &64 bits &96 bits\\\hline 
+{LSH} &{0.1731} &{0.2202} &{0.2686} &{0.3267} &{0.3553} &{0.040} &{0.044} &{0.062} &{0.091} &{0.129} \\
+{ITQ} &{0.3818} &{0.4132} &{0.4367} &{0.4601} &{0.4673} &{0.892} &{1.42} &{2.72} &{5.27} &{7.18}\\ 
+{KSH} &{0.7103} &{0.7880} &{0.8258} &{0.8434} &{0.8428} &{48.02} &{90.72} &{179.82} &{337.53} &{508.68}\\
+{SDH} &{0.5956} &{0.8544} &{0.8861} &{0.8945} &{0.8963} &{6.45} &{7.13} &{17.27} &{59.60} &{127.06}\\
+{NSH} &{0.7314} &{0.8667} &{0.8934} &{0.9102} &{0.9105} &{4.33} &{5.25} &{5.38} &{6.89} &{8.51}\\
+{FSDH} &{0.8701} &{0.8940} &{0.9139} &{0.9200} &{0.9253} &{8.60} &{7.93} &{8.71} &{9.94} & {10.46}\\
+{COSDISH}&{0.7895}&{0.8498} &{0.8740} &{0.8866} &{0.8861} &{4.59} &{8.08} &{30.31} &{107.01} &{241.08} \\
+{SSDH}&\textbf{0.9338} &\textbf{0.9557}&\textbf{0.9639} &\textbf{0.9669}&\textbf{0.9683} &{3.68} &{3.80} &{3.81} &{3.93}&{4.09}\\\hline\end{tabular}\end{table*}
+
+\begin{table*}[t]\footnotesize\center
+\caption{数据集MIRFlickr上的结果。位数相同情况下最好的MAP结果被加粗显示。}\label{tablemir}
+\begin{tabular}{cccccc|ccccc}\hline
+  & \multicolumn{5}{c|}{MAP} &  \multicolumn{5}{c}{训练时间（单位：秒）}\\\hline
+ Method  &8 bits &16 bits &32 bits &64 bits &96 bits &8 bits &16 bits &32 bits &64 bits &96 bits\\\hline 
+{LSH}& {0.5669}&{0.5760}&{0.5712}&{0.5862} &{0.5885} &{0.005} & {0.005} & {0.007} & {0.013} & {0.016} \\
+{ITQ}&{0.5760} &{0.5721} &{0.5794} &{0.5796}&{0.5806}&{0.134} &{0.154} &{0.305} &{0.589}&{0.925}\\
+{KSH}&{0.5780} &{0.5775} &{0.5794} &{0.5782}&{0.5790} & {28.69} &{57.02} &{109.05} &{219.11} & {329.99}\\
+{SDH}& {0.6023} & {0.6071} & {0.6138} & {0.6207} & {0.6220} &{1.31} &{1.90} &{3.99}& {13.19} & {30.38}\\
+{NSH}&{0.6143} &{0.6180} &{0.6158} &{0.6243} &{0.6270} &{0.873} &{0.932}&{1.03} & {1.31} & {1.59}\\
+{FSDH}& {0.5908} & {0.5957} & {0.6053} & {0.6124} &{0.6152} &{2.01} &{2.02} &{2.07} &{2.13} & {2.20}\\
+{COSDISH}&{0.6819} &{0.6939} &{0.7036} &{0.7173} &{0.7185} &{0.639} &{1.66} &{6.04} &{29.85} & {69.99} \\
+{SSDH} & \textbf{0.7099} & \textbf{0.7128} & \textbf{0.7154} & \textbf{0.7198}& \textbf{0.7258} & {0.722} & {0.849} & {1.32} & {3.10}& {6.29}\\\hline\end{tabular}\end{table*}
+
+\begin{table*}[t]\footnotesize\center
+\caption{数据集CIFAR-10上的结果。位数相同情况下最好的MAP结果被加粗显示。}\label{tablecifar}
+\begin{tabular}{cccccc|ccccc}\hline
+  & \multicolumn{5}{c|}{MAP} &  \multicolumn{5}{c}{训练时间（单位：秒）}\\\hline
+ Method  &8 bits &16 bits &32 bits &64 bits &96 bits &8 bits &16 bits &32 bits &64 bits &96 bits\\\hline 
+{LSH}&{0.1077}&{0.1165}&{0.1199}&{0.1270}&{0.1360}&{0.021} & {0.025} & {0.032} & {0.044} & {0.064}\\
+{ITQ}&{0.1429}&{0.1482}&{0.1569}&{0.1487}&{0.1551}&{0.483}&{0.743}& {1.32} & {2.54} & {3.98}\\ 
+{KSH}    & {0.2315} & {0.2623} & {0.2905} & {0.3095} & {0.3199}&{29.91} & {59.59} & {121.00} & {243.73} & {359.11}\\
+{SDH}    & {0.2373} & {0.3528} & {0.3868} & {0.4049} & {0.4159} & {4.58} & {5.55} & {9.09} & {29.54} & {83.13}\\
+{NSH}   & {0.2902} & {0.2936} & {0.3220} & {0.3390} & {0.3687} & {2.99} & {3.675} & {3.70} & {4.81} & {5.75}\\
+{FSDH}  & {0.3311} & {0.3884} & {0.4270} & {0.4522} & {0.4646} & {6.05} & {6.09} & {6.26} & {6.65} & {7.05}\\
+{COSDISH} & {0.5012} & {0.5745} & {0.6094} & {0.6321} & {0.6394} & {2.10} & {4.33} & {15.19} & {76.99} & {180.34} \\
+{SSDH} & \textbf{0.5151} & \textbf{0.6698} & \textbf{0.6991} & \textbf{0.7046}& \textbf{0.7063} & {2.61} & {2.69} & {2.66} & {2.67} & {2.73}\\\hline \end{tabular} \end{table*}
+
+\begin{table*}[t]\footnotesize\center
+\caption{数据集CIFAR-100上的结果。位数相同情况下最好的MAP结果被加粗显示。}\label{tablecifar100}
+\begin{tabular}{cccccc|ccccc}\hline
+ \multirow{2}{*}{Method} 
+  & \multicolumn{5}{c|}{MAP} &  \multicolumn{5}{c}{训练时间（单位：秒）}\\\cline{2-11}
+ &8位&16位&32位&64位&96位&8位&16位 &32位 &64位 &96位\\\hline
+{LSH}&{0.0117}&{0.0125}&{0.0139}&{0.0153}&{0.0169} &{0.021} &{0.025} &{0.027} &{0.0485} &{0.059}\\
+{ITQ}&{0.0125}&{0.0151}&{0.0170}&{0.0193}&{0.0203} &{0.468} &{0.711} &{1.28} &{2.46} &{4.01}\\
+{KSH}&{0.0225}&{0.0268}&{0.0290}&{0.0307}&{0.0338} &{32.63} &{63.60} &{128.91} &{257.12} &{386.89}\\
+{SDH}&{0.0217}&{0.0339}&{0.0473}&{0.0589}&{0.0392} & {3.83} &{5.77} &{9.69} &{80.92} &{190.57}\\
+{NSH}&{0.0323}&{0.0483}&{0.0649}&{0.0758}&{0.0837} & {3.24} &{3.53} &{4.07} &{5.58} &{6.99}\\
+{FSDH}&{0.0256}&{0.0419}&{0.0598}&{0.0690}&{0.0884} & {6.61} &{6.55} &{6.73} &{7.01} &{7.57}\\
+{COSDISH}&{0.0379}&{0.0752}&{0.1449}&{0.2019}&{0.2292}&{1.99}&{6.39}&{16.76} &{79.82} &{185.28} \\
+{SSDH}&\textbf{0.1001}&\textbf{0.1640}&\textbf{0.2348}&\textbf{0.2824}&\textbf{0.2674}&{3.03}&{3.11}&{3.16} &{3.30}&{3.34}\\\hline\end{tabular}\end{table*}
+
+所有方法在MNIST、MIRFlickr、CIFAR-10和CIFAR-100这四个数据集上的均值平均精度结果和训练时间结果分别列在表\ref{tablemir}、表\ref{tablemir}、表\ref{tablecifar}和表\ref{tablecifar100}中。
+
+从这些实验结果中，我们能观察到如下的现象：
+\begin{itemize}
+\item 我们提出的SSDH方法可以在所有情况下取得最佳的检索效果，这证明了我们方法是有效的。
+\item 无监督哈希方法如LSH和ITQ需要最少的时间就可以完成训练。但是他们的检索效果比监督哈希方法差很多。
+\item 在单标签数据集MNIST、CIFAR-10和CIFAR-100上，因为我们采用了一步优化所有位上哈希码的策略，所以SSDH可以非常效率地完成训练。当位数相同的时候，SSDH是最快或是比较快的监督哈希模型。当哈希码位数逐渐变长的时候，对比方法KSH、SDH和COSDISH （均采用按位优化的策略）的时间消耗会随着哈希码位数变长而增大；而我们的SSDH方法的时间消耗不会随着位数变长而有明显地增加。
+\item 在多标签数据集MIRFlickr上，虽然此时我们的模型也采用和大部分对比方法一样的按位优化策略，但是我们可以看到，SSDH的时间消耗仍然很少。这说明我们的模型是十分有效率的。
+\item 随着数据集中类别数量的逐渐增加，数据会变得更加的复杂，检索的难度也会随之增加。我们可以直观地从实验结果中发现：各种方法在CIFAR-100数据集上的检索结果会比在CIFAR-10上的结果普遍要差一些。
+\end{itemize}
+
+从均值平均精度和时间比较中我们可以得出结论：我们的SSDH模型可以高效并且有效地在上述四个数据集上进行检索任务。
+
+
+
+
+\subsubsection{前N准确率曲线和准确率-召回率曲线比较}
+\esubsubsection{Precision-Recall and Top-N Precision Curves}
+
+为了更进一步地观察各种方法的检索结果，我们画出了前N准确率曲线（图\ref{PN}）和准确率-召回率曲线（图\ref{PR}）。
+
+从这些图中，我们可以发现如下实验现象：
+\begin{itemize}
+\item 在前N准确率曲线图上，SSDH在所有实验设置下均可以获得最佳的实验结果，并且相对于对比方法的效果提升非常明显。而且在$N$小的时候，SSDH的结果更加突出，这意味着在只返回少量样本的情况下，SSDH可以更准确的给出与查询样本相似的样本。
+\item 在准确率-召回率曲线图上，我们发现SSDH同样地在所有情况下均取得最佳效果。
+\end{itemize}
+
+从这些图中，我们得出结论：SSDH可以取得比对比方法更好的检索结果。
+
+
+
+\begin{figure*}
+\begin{minipage}{0.24\linewidth}\centering
+\centerline{\includegraphics[width=3.8cm]{Images/chap3/MNISTPN8}}\centerline{\footnotesize(a) MNIST 8位}\medskip
+\end{minipage}
+\begin{minipage}{0.24\linewidth}\centering
+\centerline{\includegraphics[width=3.8cm]{Images/chap3/MPN8}}\centerline{\footnotesize(f) MIRFlickr 8位}\medskip
+\end{minipage}
+\begin{minipage}{0.24\linewidth}\centering
+\centerline{\includegraphics[width=3.8cm]{Images/chap3/CPN8}}\centerline{\footnotesize(k) CIFAR-10 8位}\medskip
+\end{minipage}
+\begin{minipage}{0.24\linewidth}\centering
+\centerline{\includegraphics[width=3.8cm]{Images/chap3/C100PN8}}\centerline{\footnotesize(p) CIFAR-100 8位}\medskip
+\end{minipage}\\
+\begin{minipage}{0.24\linewidth}\centering
+\centerline{\includegraphics[width=3.8cm]{Images/chap3/MNISTPN16}}\centerline{\footnotesize(b) MNIST 16位}\medskip
+\end{minipage}
+\begin{minipage}{0.24\linewidth}\centering
+\centerline{\includegraphics[width=3.8cm]{Images/chap3/MPN16}}\centerline{\footnotesize(g) MIRFlickr 16位}\medskip
+\end{minipage}
+\begin{minipage}{0.24\linewidth}\centering
+\centerline{\includegraphics[width=3.8cm]{Images/chap3/CPN16}}\centerline{\footnotesize(l) CIFAR-10 16位}\medskip
+\end{minipage}
+\begin{minipage}{0.24\linewidth}\centering
+\centerline{\includegraphics[width=3.8cm]{Images/chap3/C100PN16}}\centerline{\footnotesize(q) CIFAR-100 16 位}\medskip
+\end{minipage}\\
+\begin{minipage}{0.24\linewidth}\centering
+\centerline{\includegraphics[width=3.8cm]{Images/chap3/MNISTPN32}}\centerline{\footnotesize(c) MNIST 32位}\medskip
+\end{minipage}
+\begin{minipage}{0.24\linewidth}\centering
+\centerline{\includegraphics[width=3.8cm]{Images/chap3/MPN32}}\centerline{\footnotesize(h) MIRFlickr 32位}\medskip
+\end{minipage}
+\begin{minipage}{0.24\linewidth}\centering
+\centerline{\includegraphics[width=3.8cm]{Images/chap3/CPN32}}\centerline{\footnotesize(m) CIFAR-10 32位}\medskip
+\end{minipage}
+\begin{minipage}{0.24\linewidth}\centering
+\centerline{\includegraphics[width=3.8cm]{Images/chap3/C100PN32}}\centerline{\footnotesize(r) CIFAR-100 32 位}\medskip
+\end{minipage}
+\begin{minipage}{0.24\linewidth}\centering
+\centerline{\includegraphics[width=3.8cm]{Images/chap3/MNISTPN64}}\centerline{\footnotesize(d) MNIST 64位}\medskip
+\end{minipage}
+\begin{minipage}{0.24\linewidth}\centering
+\centerline{\includegraphics[width=3.8cm]{Images/chap3/MPN64}}\centerline{\footnotesize(i) MIRFlickr 64位}\medskip
+\end{minipage}
+\begin{minipage}{0.24\linewidth}\centering
+\centerline{\includegraphics[width=3.8cm]{Images/chap3/CPN64}}\centerline{\footnotesize(n) CIFAR-10 64位}\medskip
+\end{minipage}
+\begin{minipage}{0.24\linewidth}\centering
+\centerline{\includegraphics[width=3.8cm]{Images/chap3/C100PN64}}\centerline{\footnotesize(s) CIFAR-100 64 位}\medskip
+\end{minipage}
+\begin{minipage}{0.24\linewidth}\centering
+\centerline{\includegraphics[width=3.8cm]{Images/chap3/MNISTPN96}}\centerline{\footnotesize(e) MNIST 96位}\medskip
+\end{minipage}
+\begin{minipage}{0.24\linewidth}\centering
+\centerline{\includegraphics[width=3.8cm]{Images/chap3/MPN96}}\centerline{\footnotesize(j) MIRFlickr 96位}\medskip
+\end{minipage}
+\begin{minipage}{0.24\linewidth}\centering
+\centerline{\includegraphics[width=3.8cm]{Images/chap3/CPN96}}\centerline{\footnotesize(o) CIFAR-10 96位}\medskip
+\end{minipage}
+\begin{minipage}{0.24\linewidth}\centering
+\centerline{\includegraphics[width=3.8cm]{Images/chap3/C100PN96}}\centerline{\footnotesize(t) CIFAR-100 96 位}\medskip
+\end{minipage}
+\caption{所有方法在四个数据集上的前N准确率曲线，哈希码位数在8位到96位之间变化。}\medskip
+\label{PN}
+\end{figure*}
+
+\begin{figure*}
+\begin{minipage}{0.24\linewidth}\centering
+\centerline{\includegraphics[width=3.8cm]{Images/chap3/MNISTPR8}}\centerline{\footnotesize(a) MNIST 8位}\medskip
+\end{minipage}\begin{minipage}{0.24\linewidth}\centering
+\centerline{\includegraphics[width=3.8cm]{Images/chap3/MPR8}}\centerline{\footnotesize(f) MIRFlickr 8位}\medskip
+\end{minipage}\begin{minipage}{0.24\linewidth}\centering
+\centerline{\includegraphics[width=3.8cm]{Images/chap3/CPR8}}\centerline{\footnotesize(k) CIFAR-10 8位}\medskip
+\end{minipage}\begin{minipage}{0.24\linewidth}\centering
+\centerline{\includegraphics[width=3.8cm]{Images/chap3/C100PR8}}\centerline{\footnotesize(p) CIFAR-100 8位}\medskip
+\end{minipage}\\\begin{minipage}{0.24\linewidth}\centering
+\centerline{\includegraphics[width=3.8cm]{Images/chap3/MNISTPR16}}\centerline{\footnotesize(b) MNIST 16位}\medskip
+\end{minipage}\begin{minipage}{0.24\linewidth}\centering
+\centerline{\includegraphics[width=3.8cm]{Images/chap3/MPR16}}\centerline{\footnotesize(g) MIRFlickr 16位}\medskip
+\end{minipage}\begin{minipage}{0.24\linewidth}\centering
+\centerline{\includegraphics[width=3.8cm]{Images/chap3/CPR16}}\centerline{\footnotesize(l) CIFAR-10 16位}\medskip
+\end{minipage}\begin{minipage}{0.24\linewidth}\centering
+\centerline{\includegraphics[width=3.8cm]{Images/chap3/C100PR16}}\centerline{\footnotesize(q) CIFAR-100 16 位}\medskip
+\end{minipage}\\\begin{minipage}{0.24\linewidth}\centering
+\centerline{\includegraphics[width=3.8cm]{Images/chap3/MNISTPR32}}\centerline{\footnotesize(c) MNIST 32位}\medskip
+\end{minipage}\begin{minipage}{0.24\linewidth}\centering
+\centerline{\includegraphics[width=3.8cm]{Images/chap3/MPR32}}\centerline{\footnotesize(h) MIRFlickr 32位}\medskip
+\end{minipage}\begin{minipage}{0.24\linewidth}\centering
+\centerline{\includegraphics[width=3.8cm]{Images/chap3/CPR32}}\centerline{\footnotesize(m) CIFAR-10 32位}\medskip
+\end{minipage}\begin{minipage}{0.24\linewidth}\centering
+\centerline{\includegraphics[width=3.8cm]{Images/chap3/C100PR32}}\centerline{\footnotesize(r) CIFAR-100 32 位}\medskip
+\end{minipage}\\\begin{minipage}{0.24\linewidth}\centering
+\centerline{\includegraphics[width=3.8cm]{Images/chap3/MNISTPR64}}\centerline{\footnotesize(d) MNIST 64位}\medskip
+\end{minipage}\begin{minipage}{0.24\linewidth}\centering
+\centerline{\includegraphics[width=3.8cm]{Images/chap3/MPR64}}\centerline{\footnotesize(i) MIRFlickr 64位}\medskip
+\end{minipage}\begin{minipage}{0.24\linewidth}\centering
+\centerline{\includegraphics[width=3.8cm]{Images/chap3/CPR64}}\centerline{\footnotesize(n) CIFAR-10 64位}\medskip
+\end{minipage}\begin{minipage}{0.24\linewidth}\centering
+\centerline{\includegraphics[width=3.8cm]{Images/chap3/C100PR64}}\centerline{\footnotesize(s) CIFAR-100 64 位}\medskip
+\end{minipage}\\ \begin{minipage}{0.24\linewidth}\centering
+\centerline{\includegraphics[width=3.8cm]{Images/chap3/MNISTPR96}}\centerline{\footnotesize(e) MNIST 96位}\medskip
+\end{minipage}\begin{minipage}{0.24\linewidth}\centering
+\centerline{\includegraphics[width=3.8cm]{Images/chap3/MPR96}}\centerline{\footnotesize(j) MIRFlickr 96位}\medskip
+\end{minipage}\begin{minipage}{0.24\linewidth}\centering
+\centerline{\includegraphics[width=3.8cm]{Images/chap3/CPR96}}\centerline{\footnotesize(o) CIFAR-10 96位}\medskip
+\end{minipage}\begin{minipage}{0.24\linewidth}\centering
+\centerline{\includegraphics[width=3.8cm]{Images/chap3/C100PR96}}\centerline{\footnotesize(t) CIFAR-100 96 位}\medskip
+\end{minipage}\caption{所有方法在四个数据集上的准确率-召回率曲线，哈希码位数在8位到96位之间变化。}\medskip\label{PR}\end{figure*}
+
+
+\subsection{大规模检索}
+\esubsection{Large-Scale Search}
+
+在本节中，我们在两个大规模数据集上进行了对比实验。
+
+\subsubsection{NUS-WIDE数据集上的实验}
+\esubsubsection{Experiments on NUS-WIDE}
+
+The MAP results of all methods on NUS-WIDE are shown in Table \ref{tablenus}. To further evaluate the scalability of SSDH and all baselines, training time is also reported in this table. From this table, we can find that:
+\begin{itemize}%[leftmargin=1cm]
+\item SSDH obtains the best MAP results in all cases.
+\item The training process of SSDH is very fast and scales well. On NUS-WIDE, which has nearly 200,000 samples, the training costs in cases of 16-bit, 32-bit, and 64-bit are about 10, 20, and 56 seconds, respectively.
+\item The MAP results of COSDISH are comparable to those of SSDH and both of them perform better than other baselines with large accuracy gains. But COSDISH needs much more training time than SSDH. Thus, SSDH is more scalable than COSDISH.
+\item With code lengths being 32 and 64, NSH and FSDH can be trained faster than SSDH because they simultaneously learn all bits. As SSDH learns hash codes bit by bit for multi-label data, it needs more time than NSH and FSDH. However, SSDH can obtain much better MAP results than both NSH and FSDH with slightly increased time cost.
+\end{itemize}
+
+In a nutshell, SSDH is the most practical supervised hashing method, especially for large-scale datasets.
+
+\subsubsection{ImageNet数据集上的实验}
+\esubsubsection{Experiments on ImageNet}
+
+
+
+
+
+\begin{itemize}
+\item 同在MNIST数据集上的结果一致，监督哈希模型通常要比无监督哈希模型效果要好。
+\item 虽然大部分模型在MNIST数据集上可以取得较好的准确率，但在CIFAR-10上的效果缺普遍不高。这说明CIFAR-10比MNIST更具有挑战性。
+\item CCH在所有情况下均可以取得比其他对比方法更好的结果。这再次表明我们方法是有效的。
+\end{itemize}
+
+
+
+
+
+
+\section{小结}
+\esection{Summary}
+
+

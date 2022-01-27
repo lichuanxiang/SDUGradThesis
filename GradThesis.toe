@@ -1,0 +1,48 @@
+\contentsline {chapter}{Abstract in Chinese}{I}{chapter*.3}
+\contentsline {chapter}{Abstract in English}{III}{chapter*.4}
+\contentsline {chapter}{\numberline {Chapter \hskip 0.5em \relax 1}\hskip 1.8em\relax \hskip 1.8em\relax Introduction}{1}{chapter.1}
+\contentsline {section}{\numberline {1.1}Background and motivation of Research}{1}{section.1.1}
+\contentsline {subsection}{\numberline {1.1.1}Background of research}{1}{subsection.1.1.1}
+\contentsline {subsection}{\numberline {1.1.2}Motivation of research}{2}{subsection.1.1.2}
+\contentsline {section}{\numberline {1.2}Related works}{3}{section.1.2}
+\contentsline {subsection}{\numberline {1.2.1}Unsupervised single-modal hashing methods}{4}{subsection.1.2.1}
+\contentsline {subsection}{\numberline {1.2.2}Supervised single-modal hashing methods}{5}{subsection.1.2.2}
+\contentsline {subsection}{\numberline {1.2.3}Deep single-modal hashing methods}{6}{subsection.1.2.3}
+\contentsline {subsection}{\numberline {1.2.4}Modality-specific cross-modal hashing methods}{7}{subsection.1.2.4}
+\contentsline {subsection}{\numberline {1.2.5}Integrated cross-modal hashing methods}{7}{subsection.1.2.5}
+\contentsline {subsection}{\numberline {1.2.6}Deep cross-modal hashing methods}{9}{subsection.1.2.6}
+\contentsline {section}{\numberline {1.3}Main contents}{9}{section.1.3}
+\contentsline {section}{\numberline {1.4}Thesis framework}{10}{section.1.4}
+\contentsline {chapter}{\numberline {Chapter \hskip 0.5em \relax 2}\hskip 1.8em\relax \hskip 1.8em\relax Scalable Discrete Matrix Factorization Hashing}{11}{chapter.2}
+\contentsline {section}{\numberline {2.1}Introduction}{11}{section.2.1}
+\contentsline {section}{\numberline {2.2}SCRATCH method}{12}{section.2.2}
+\contentsline {subsection}{\numberline {2.2.1}Notations}{12}{subsection.2.2.1}
+\contentsline {subsection}{\numberline {2.2.2}Collective matrix factorization}{12}{subsection.2.2.2}
+\contentsline {subsection}{\numberline {2.2.3}Preserving label consistency}{12}{subsection.2.2.3}
+\contentsline {subsection}{\numberline {2.2.4}Learning mapping functions}{13}{subsection.2.2.4}
+\contentsline {subsection}{\numberline {2.2.5}Learning hash codes}{13}{subsection.2.2.5}
+\contentsline {subsection}{\numberline {2.2.6}Feature kernelization}{14}{subsection.2.2.6}
+\contentsline {subsection}{\numberline {2.2.7}Overall objective function}{14}{subsection.2.2.7}
+\contentsline {section}{\numberline {2.3}Optimization process}{15}{section.2.3}
+\contentsline {section}{\numberline {2.4}Algorithm analysis}{18}{section.2.4}
+\contentsline {subsection}{\numberline {2.4.1}Out-of-sample extension}{18}{subsection.2.4.1}
+\contentsline {subsection}{\numberline {2.4.2}Time complexity analysis}{18}{subsection.2.4.2}
+\contentsline {subsection}{\numberline {2.4.3}Theorem analysis}{19}{subsection.2.4.3}
+\contentsline {section}{\numberline {2.5}Summary}{20}{section.2.5}
+\contentsline {chapter}{\numberline {Chapter \hskip 0.5em \relax 3}\hskip 1.8em\relax \hskip 1.8em\relax Experimental Results and Analyses}{21}{chapter.3}
+\contentsline {section}{\numberline {3.1}Datasets}{21}{section.3.1}
+\contentsline {section}{\numberline {3.2}Baselines and Metrics}{22}{section.3.2}
+\contentsline {section}{\numberline {3.3}Results and Analysis}{25}{section.3.3}
+\contentsline {subsection}{\numberline {3.3.1}Results on Wiki}{25}{subsection.3.3.1}
+\contentsline {subsection}{\numberline {3.3.2}Results on MIRFlickr-25K}{25}{subsection.3.3.2}
+\contentsline {subsection}{\numberline {3.3.3}Results on NUS-WIDE}{27}{subsection.3.3.3}
+\contentsline {subsection}{\numberline {3.3.4}Parameter sensitivity analysis}{31}{subsection.3.3.4}
+\contentsline {subsection}{\numberline {3.3.5}Time cost analysis}{32}{subsection.3.3.5}
+\contentsline {subsection}{\numberline {3.3.6}Comparison with Deep Hashing}{33}{subsection.3.3.6}
+\contentsline {section}{\numberline {3.4}Summary}{34}{section.3.4}
+\contentsline {chapter}{\numberline {Chapter \hskip 0.5em \relax 4}\hskip 1.8em\relax \hskip 1.8em\relax Conclusions and Future Works}{35}{chapter.4}
+\contentsline {section}{\numberline {4.1}Conclusions}{35}{section.4.1}
+\contentsline {section}{\numberline {4.2}Future Works}{35}{section.4.2}
+\contentsline {chapter}{Reference}{37}{section.4.2}
+\contentsline {chapter}{Acknowledgements}{45}{chapter*.27}
+\contentsline {chapter}{List of Published Papers}{46}{chapter*.28}

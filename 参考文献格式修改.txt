@@ -1,0 +1,2 @@
+C:\CTEX\MiKTeX\bibtex\bst\base
+将unsrt.bst中的\em 改为\it

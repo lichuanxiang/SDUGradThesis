@@ -1,0 +1,31 @@
+\begin{englishabstract}
+\eabstract{Abstract in English}
+
+Recent years have witnessed the era of information explosion, in which the rapid development of information technology, i.e., Internet, e-commerce, cloud computing and mobile social media, has led to a sharp increase in the number and size of data. Large-scale multi-modal data put forward higher requirements on data processing and storage capacity, which is not only to process large-scale data in an acceptable time, but also limit the storage capacity of data to an acceptable range. This is still a challenge for the retrieval of large-scale multi-modal data. Hashing emerges in order to solve the problem of approximate nearest neighbor retrieval for high-dimensional large-scale data. It represents the original data  as a fixed-length binary hash code and maintain the original similarity information such as semantic relations in Hamming space.
+
+Most of the traditional hashing methods are mainly designed for single-modal data, which solves the problem of data retrieval in a single modality. With the rapid development of information technology and the explosive growth of data, multi-modal data is increasing. Therefore, there are more requirements for cross-modal retrieval, such as using text to retrieve image, and cross-modal hashing retrieval becomes an effective solution.
+
+At present, there are many cross-modal hashing methods based on machine learning, and have achieved great retrieval performance, but there are still some limitations on their performance: As the binary discrete optimization problem is more difficult to solve, some methods relax the discrete conditions by first obtaining the real-valued representation of the hash code, and then binarizing the obtained real-valued representation to obtain the final hash code. However, the relaxation optimization will generate a large quantization error, leading to poor retrieval performance. There are also some methods for direct discrete optimization, but the time required for optimization is greatly increased. In the choice of supervised information, some methods choose to use $n \times n$ similarity matrix for similarity maintaining, which will increase the time complexity of training from linear $O(n)$ to $O(n^2)$, making it harder to extend to large-scale datasets.
+
+After comprehensively taking the above problems into account, this paper proposes a new supervised hashing method, namely, Scalable disCRete mATrix faCtorization Hashing, SCRATCH for short. It combines the collective matrix factorization and semantic embedding to solve the problem of similarity preserving and scalability, and leverages random orthogonal rotation matrix to keep the discrete property of hash codes in training stage, in order to train the model as fast as possible and improve the retrieval precision. The contributions of this work are summarized as follows:
+
+\begin{itemize}
+\vspace{-3mm}
+\item We propose a novel matrix factorization based supervised cross-modal hashing method. By leveraging the matrix factorization and semantic embedding, SCRATCH can make full use of current supervised semantic information to find a common sub-space where the latent semantic relations among modalities of heterogeneous data can be captured and the intra- and inter-modality similarities are preserved.
+\vspace{-3mm}
+\item SCRATCH uses label matrix rather than $n \times n$ similarity matrix, such that its time and space complexity are always linear with the number of dataset instances, making it scalable to large-scale datasets.
+\vspace{-3mm}
+\item In order to avoid the large quantization error caused by using relaxation technique to solve the discrete optimization problem, SCRATCH introduces a random orthogonal rotation matrix to keep the discrete property of hash codes in the training process, and combine with an iterative optimization strategy, thus minimizing the quantization error in the training process. What's more, as it uses matrix optimization techniques, the solution of the matrices can be got by matrix derivation to obtain its closed solution, thus avoiding the large training time of other discrete optimization techniques.
+\vspace{-3mm}
+\item By comparing experiments on three multi-modal datasets, including retrieval performance, training time, and using a deep network as image feature extractor with loss function of SCRATCH to compare the retrieval performance with current advanced deep cross-modal hashing methods, we can see that SCRATCH achieves state-of-the-art performance on three benchmark multi-modal datasets and the training time is greatly reduced, which means that it is extremely effective and practical and can be easily extended to large-scale datasets.
+\end{itemize}
+
+
+%\vspace{1mm}
+%\begin{tabular*}{\textwidth}{ll}
+%\hspace{-2.5em}
+\noindent\textbf{Keywords:} Hash learning; Cross-modal retrieval; Matrix factorization; Discrete\\
+optimization; Approximate nearest neighbor search
+%\end{tabular*}
+
+\end{englishabstract}

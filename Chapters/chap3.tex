@@ -1,0 +1,593 @@
+\chapter{\quad\quad 实验结果与分析}
+\label{chap3}
+\echapter{Experimental Results and Analyses}
+
+为了验证本文提出的跨模态哈希方法的有效性，我们在三个常用的基准数据集（Wiki\cite{rasiwasia10wiki}、MIRFlickr-25K\cite{huiskes08mir} 和\ NUS-WIDE\cite{chua09nus}）上做了进一步的扩展实验，并与八个当前先进的浅层跨模态哈希方法和一个深度跨模态哈希方法进行了实验对比。同时，为了更好地展示\ SCRATCH 对其他对比方法的优越性，我们使用\ MAP 来衡量其检索性能，并画出不同模态之间相互检索的\ top-N precision 和\ precision-recall 曲线来进一步说明\ SCRATCH 的设计对跨模态检索任务性能的巨大提升。
+
+
+
+\section{数据集}
+\esection{Datasets}
+
+\textbf{Wiki}：该数据集由从\ Wikipedia 收集的\ 2,866 个图片-文本对构成，共有十个类别，每个样本只属于十类中的一类，属于单标签数据集。除此之外，每个样本的图片模态由\ 128 维的\ bag-of-visual SIFT 特征向量来表示，文本模态由10维的隐狄利克雷分配（LDA）主题向量来表示。在这个数据集中，我们随机选取\ $75\%$ 的图片-文本对作为训练集和检索集，剩余的\ $25\%$ 作为待查询测试集。
+
+\textbf{MIRFlickr-25K}：该数据集包含了从\ Flickr 上收集的\ 25,000 张图片，每个图片由24个不同的文本标签中的一个或多个来进行标记，属于多标签数据集，即每个样本被至少一个标签标记。我们选取了其中至少包含20个文本标记的样本作为实验数据集，并最终选取了\ 20,015 个样本。每个样本的图片模态由\ 512 维的\ GIST 特征向量来表示，文本模态由\ 1,386 维的\ bag-of-words 向量表示。在该数据集中，我们随机选取\ 2,000 个样本作为待查询测试集，其余的\ 18,015 个样本数据作为训练集和检索集。
+
+\textbf{NUS-WIDE}: 该数据集从\ Flickr 上爬取了\ 269,648 张图片，每个样本被人工标记了提供的\ 81 个标签中的一个或多个，也是多标签数据集。考虑到一些标签用的比较稀少，我们选取了\ 10 个最常用的标签及其对应的\ 186,577 张图片作为最终的实验数据集。每个图片-文本对被标记为\ 10 类中的至少一类，对于每个实验样本，图片模态表示为\ 500 维的\ bag-of-visual SIFT 特征向量，文本模态被表示为\ 1,000 维的特征向量。对于该数据集，我们随机选取\ 2,000 个样本作为待查询测试集，剩余的\ 184,577 个样本作为训练集和检索集。值得一提的是，由于该数据集样本规模较大，通常用于测试哈希方法是否可扩展到大规模数据集上。
+
+\section{对比方法和评价标准}
+\esection{Baselines and Metrics}
+
+我们将\ SCRATCH 与八种当前先进的浅层跨模态哈希方法（即LSSH\cite{zhouJ14LSSH}、CMFH\cite{ding14cmfh}、SCM-seq\cite{zhang14scm}、CCQ\cite{long16ccq}、SePH-km\cite{lin15seph}、SMFH\cite{Liu16smfh}、FSH\cite{liu17fsh} 和\ DCH\cite{xu17dch}）以及一种深度跨模态哈希方法（深度跨模态哈希（DCMH）\cite{jiang2017dcmh}）进行实验对比。这些方法按照是否使用监督信息可被划分为两类：LSSH、CMFH、CCQ 和\ FSH 是无监督跨模态哈希方法，而 SCM-seq、SePH-km、SMFH、DCH 和\ DCMH 则是有监督跨模态哈希方法。所有对比方法都由其论文原作者倾情提供，在此表示真挚感谢。除此之外，SCMFH\cite{ding2016scmfh} 是\ CMFH 的有监督扩展版本，然而\ SCMFH 原论文\cite{ding2016scmfh} 中所展示的实验结果与\ CMFH 相比提升并不明显，而本文方法较\ CMFH 有极大的性能提升，且\ SCMFH 的源代码尚未公布，因此本文未将其列入对比方法中。
+
+我们认真地对这些模型进行了调参训练并展示了这些模型所能达到的最好结果。由于\ NUS-WIDE 数据集过于巨大，SePH-km 和\ FSH 由于使用了\ $n*n$ 的相似性矩阵导致其计算量随数据量增大而急剧增加，为了解决这两个方法所需的高额计算量消耗问题，我们借助了在\ CMFH\cite{ding14cmfh} 和\ SePH-km\cite{lin15seph} 中使用的策略，通过从\ NUS-WIDE 训练集中随机选取\ 5,000 个样本来训练\ SePH-km 和\ FSH，从而减小训练消耗。SCRATCH 的调参过程采用交叉验证来选取最优的超参数，最终结果为：$\lambda_1=\lambda_2=0.5$、$\mu=1,000$、$ \alpha=500$、$\gamma=5$，除此之外，总迭代次数设置为15 次。
+
+所有方法的性能均使用\ Mean Average Precision (MAP)来进行度量，对于一个待查询样本\ $\textbf{q}$ 来说，其平均精度（Average Precision，AP）表示如下：
+\begin{equation}
+	AP(q)= \frac{1}{L_q}\sum_{r=1}^nP_q(r)\delta_q(r),
+\end{equation}
+
+在数据库中，$L_q$ 是样本\ $\textbf{q}$ 的真实近邻数量，$n$ 是数据库中样本数量，$P_q(r)$ 定义了检索前\ $r$ 个样本的准确率，如果第\ $r$ 个检索样本是真实近邻样本的话，则\ $\delta_q(r)=1$，否则\ $\delta_q(r)=0$。在\ Wiki 单标签数据集上，真实近邻被定义为含有相同标签的那些样本，而在\ MIRFlickr-25K 和\ NUS-WIDE 数据集上，我们定义真实近邻为那些至少共享一个语义标签的样本（即每个样本具有多个标签标记，只要有一个标签相同就视为近邻）。
+
+Mean Average Precision (MAP) 定义为下式：
+\begin{equation}
+	MAP=\frac{1}{|Q|}\sum_{i=1}^{|Q|} AP(q_i),
+\end{equation}
+
+其中\ $|Q|$ 代表待查询测试集的样本数量。
+
+
+为了更直观地展示\ SCRATCH 和其他对比方法的区别及其性能提升，我们进一步画出了各个数据集上哈希码位数为\ 64 位和\ 128 位时的\ top-N precision 和\ precision-recall 曲线。在实验中，我们探索了两个跨模态检索任务：1) Image-to-Text：使用图片模态数据作为待查询样本来检索相应的文本模态数据；2) Text-to-Image：使用文本模态数据作为待查询样本来检索相应的图片模态数据。对于所有的度量标准来说，MAP 值越大或者曲线所在高度越高，则代表该方法的性能越好。
+
+
+\begin{table}[htb]
+\small
+\center
+\begin{center}
+\caption{\bf Wiki 数据集基于\ MAP 的性能对比}
+\label{map_wiki}
+%\vspace{-2mm}
+\begin{tabular}{cllllll}
+  \toprule[1pt]
+  Task & Method & 8 bits & 16 bits & 32 bits & 64 bits & 128 bits\\
+  \hline
+  \multirow{8}{*}{\tabincell{c}{Image\\to\\Text}}
+  & {LSSH} & {0.1831} & {0.2162} & {0.2164} & {0.2041} & {0.2084}\\
+  & {CMFH} & {0.2006} & {0.2145} & {0.2288} & {0.2360} & {0.2396}\\
+  & {SCM-seq} & {0.2125} & {0.2341} & {0.2410} & {0.2437} & {0.2541}\\
+  & {CCQ} & {0.1642} & {0.1675} & {0.1683} & {0.1682} & {0.1680}\\
+  & {SePH-km} & {0.2620} & {0.2796} &{0.2820} & {0.3076} & {0.3137}\\
+  & {SMFH} & {0.1673} & {0.2276} & {0.2470} & {0.2955} & {0.3133}\\
+  & {FSH} & {0.1992} & {0.2270} & {0.2433} & {0.2366} & {0.2463}\\
+  & {DCH} & {0.3111} & {0.3491} & {0.3589} & {0.3777} & {0.3791}\\
+  & {SCRATCH} & {\bf{0.3185}} & {\bf{0.3696}} & {\bf{0.3874}} & {\bf{0.4051}} & {\bf{0.4001}}\\
+  \hline
+  \multirow{8}{*}{\tabincell{c}{Text\\to\\Image}}
+  & {LSSH} & {0.4268} & {0.4990} & {0.5225} & {0.5287} & {0.5330}\\
+  & {CMFH} & {0.4434} & {0.4915} & {0.5252} & {0.5276} & {0.5347}\\
+  & {SCM-seq} & {0.2013} & {0.2257} & {0.2459} & {0.2480} & {0.2530}\\
+  & {CCQ} & {0.2094} & {0.2410} & {0.2518} & {0.2507} & {0.2543}\\
+  & {SePH-km} & {0.6065} & {0.6379} & {0.6451} & {0.6662} & {0.6706}\\
+  & {SMFH} & {0.3598} & {0.5242} & {0.5961} & {0.6608} & {0.6924}\\
+  & {FSH} & {0.4092} & {0.4864} & {0.5197} & {0.4961} & {0.5247}\\
+  & {DCH} & {0.6724} & {0.6815} & {0.7097} & {0.7216} & {0.7141}\\
+  & {SCRATCH} & {\bf{0.7058}} & {\bf{0.7471}} &{\bf{0.7543}} & {\bf{0.7654}} &{\bf{0.7679}}\\
+  \toprule[1pt]
+\end{tabular}
+\end{center}
+\end{table}
+
+
+\begin{figure*}
+%\vspace{-12mm}
+\begin{minipage}{0.5\linewidth}
+\centering
+\centerline{\includegraphics[width=8cm]{figures/Wiki_Precision/Precision_Image_VS_Text_64}}
+\end{minipage}
+%\vspace{-6mm}
+\begin{minipage}{0.5\linewidth}
+\centering
+\centerline{\includegraphics[width=8cm]{figures/Wiki_Precision/Precision_Text_VS_Image_64}}
+\end{minipage}
+\caption{\bf Wiki 数据集\ 64 位哈希码的\ Top-N precision 曲线}
+\label{curves-wiki-1}\medskip
+\end{figure*}
+
+\begin{figure*}
+\vspace{-12mm}
+\begin{minipage}{0.5\linewidth}
+\centering
+\centerline{\includegraphics[width=8cm]{figures/Wiki_Precision/Precision_Image_VS_Text_128}}
+\end{minipage}
+%\vspace{-6mm}
+\begin{minipage}{0.5\linewidth}
+\centering
+\centerline{\includegraphics[width=8cm]{figures/Wiki_Precision/Precision_Text_VS_Image_128}}
+\end{minipage}
+\caption{\bf Wiki 数据集\ 128 位哈希码的\ Top-N precision 曲线}
+\label{curves-wiki-2}\medskip
+\end{figure*}
+
+
+
+\begin{figure*}
+\vspace{-12mm}
+\begin{minipage}{0.5\linewidth}
+\centering
+\centerline{\includegraphics[width=8cm]{figures/WiKi_P_R/P_R_Image_Vs_Text_64}}
+\end{minipage}
+%\vspace{-6mm}
+\begin{minipage}{0.5\linewidth}
+\centering
+\centerline{\includegraphics[width=8cm]{figures/WiKi_P_R/P_R_Text_Vs_Image_64}}
+\end{minipage}
+%\vspace{-4mm}
+\caption{\bf Wiki 数据集\ 64 位哈希码的\ Precision-Recall 曲线}
+\label{curves-wiki-3}\medskip
+\end{figure*}
+
+
+\begin{figure*}
+%\vspace{-12mm}
+\begin{minipage}{0.5\linewidth}
+\centering
+\centerline{\includegraphics[width=8cm]{figures/Wiki_P_R/P_R_Image_Vs_Text_128}}
+\end{minipage}
+%\vspace{-6mm}
+\begin{minipage}{0.5\linewidth}
+\centering
+\centerline{\includegraphics[width=8cm]{figures/WiKi_P_R/P_R_Text_Vs_Image_128}}
+\end{minipage}
+\caption{\bf Wiki 数据集\ 128 位哈希码的\ Precision-Recall 曲线}
+\label{curves-wiki-4}\medskip
+\end{figure*}
+
+
+\section{实验结果与分析}
+\esection{Results and Analysis}
+\label{sec:result}
+\subsection{Wiki 数据集实验结果}
+\esubsection{Results on Wiki}
+\label{sec:wiki}
+SCRATCH 和所有对比方法在\ Wiki 数据集上的\ MAP 实验结果在表\ \ref{map_wiki} 中进行展示，Wiki 数据集上\ 64 位和\ 128 位哈希码上的\ top-N precision 和\ precision-recall 曲线在图 \ \ref{curves-wiki-1}—\ref{curves-wiki-4} 中画出。从这些结果中我们可以得出如下几点结论：
+%\leftmargini=7mm
+%\leftmarginii=6mm
+\begin{itemize}
+\vspace{-3mm}
+\item SCRATCH 在各个哈希码位数上执行两种跨模态检索任务的性能都要显著超过其他所有对比方法。
+\vspace{-3mm}
+\item 在\ Text-to-Image 任务上，SCRATCH 的\ MAP 明显要远远高于其他对比方法，导致这种现象的主要原因可能是相比于图像模态而言，矩阵分解更容易从文本模态中精确挖掘出隐含的主题内容信息。
+\vspace{-3mm}
+\item 多种有监督跨模态哈希方法（如\ SCRATCH、DCH 和\ SePH-km）的性能要远远超越其他的无监督方法（如\ CMFH 和\ FSH），进一步说明了利用语义信息的重要性。
+\vspace{-3mm}
+\item SCRATCH 在 $N$ 非常小的时候要比其他对比方法表现更好（例如在\ Image-to-Text 上），这说明\ SCRATCH 在\ $N$ 很小时能够检索到与待查询样本更相关的数据库样本，这对检索任务来说是非常重要的。
+\end{itemize}
+
+
+\begin{table}[htb]
+\small
+\center
+\begin{center}
+\caption{\bf MIRFlickr-25K 数据集基于\ MAP 的性能对比}
+\label{mAP_flickr}
+%\vspace{-2mm}
+\begin{tabular}{cllllll}
+  \toprule[1pt]
+  Task & Method & 8 bits & 16 bits & 32 bits & 64 bits & 128 bits\\
+  \hline
+  \multirow{8}{*}{\tabincell{c}{Image\\to\\Text}}
+  & {LSSH} & {0.5698} & {0.5812} & {0.5811} & {0.5805} & {0.5800}\\
+  & {CMFH} & {0.5599} & {0.5687} & {0.5680} & {0.5685} & {0.5687}\\
+  & {SCM-seq} & {0.6235} & {0.6373} & {0.6478} & {0.6537} & {0.6611}\\
+  & {CCQ} & {0.5712} & {0.5885} & {0.5908} & {0.5924} & {0.5928}\\
+  & {SePH-km} & {0.6641} & {0.6685} &{0.6818} & {0.6830} & {0.6873}\\
+  & {SMFH} & {0.5587} & {0.5688} & {0.5917} & {0.5953} & {0.5961}\\
+  & {FSH} & {0.5911} & {0.6016} & {0.6149} & {0.6194} & {0.6242}\\
+  & {DCH} & {0.6659} & {0.6738} & {0.6859} & {0.6897} & {0.7030}\\
+  & {SCRATCH} & {\bf{0.7092}} & {\bf{0.7131}} &{\bf{0.7222}} & {\bf{0.7265}} &{\bf{0.7346}}\\
+  \hline
+  \multirow{8}{*}{\tabincell{c}{Text\\to\\Image}} %$T\rightarrow I$
+  & {LSSH} & {0.5914} & {0.5917} & {0.5929} & {0.5926} & {0.5918}\\
+  & {CMFH} & {0.5615} & {0.5615} & {0.5606} & {0.5606} & {0.5608}\\
+  & {SCM-seq} & {0.6103} & {0.6206} & {0.6298} & {0.6372} & {0.6427}\\
+  & {CCQ} & {0.5902} & {0.5970} & {0.5992} & {0.6001} & {0.6001}\\
+  & {SePH-km} & {0.7033} & {0.7076} & {0.7212} & {0.7293} & {0.7348}\\
+  & {SMFH} & {0.5568} & {0.5586} & {0.5727} & {0.5841} & {0.5828}\\
+  & {FSH} & {0.5869} & {0.5979} & {0.6114} & {0.6186} & {0.6251}\\
+  & {DCH} & {0.7256} & {0.7511} & {0.7585} & {0.7681} & {0.7909}\\
+  %& {DCH} & {0.7344} & {0.7425} & {0.7599} & {0.7633} & {0.7927}\\
+  & {SCRATCH} & {\bf{0.7591}} & {\bf{0.7762}} &{\bf{0.7822}} & {\bf{0.7978}} & {\bf{0.8063}}\\
+  \toprule[1pt]
+\end{tabular}
+\end{center}
+\end{table}
+
+\subsection{MIRFlickr-25K 数据集实验结果}
+\esubsection{Results on MIRFlickr-25K}
+\label{sec:mirflickr}
+
+MIRFlickr-25K 数据集上\ Image-to-Text 和\ Text-to-Image 两个跨模态检索任务的\ MAP 实验结果在表\ \ref{mAP_flickr} 中进行了总结，该数据集上\ 64 位和\ 128 位哈希码上的\ top-N precision 和\ precision-recall 曲线在图\ \ref{curves-flickr-1}—\ref{curves-flickr-4} 中画出。通过上述给出的\ MIRFlickr-25K 数据集上的实验结果，我们可以观察到下面几点：
+\begin{itemize}
+\vspace{-3mm}
+\item 与在\ Wiki 数据集上的结果相同，SCRATCH 在各个哈希码位数上执行两种跨模态检索任务的性能都要显著超过其他所有对比方法。
+\vspace{-3mm}
+\item SCRATCH 在哈希码位数很低（如\ 8 或\ 16 位）的时候仍然取得了远超过其他对比方法的检索性能，这意味着对于高维数据来说，SCRATCH 可以将其降维到极低的维度进行检索的同时保证其检索质量，从而提升其检索精度和速度。
+\vspace{-3mm}
+\item 随着哈希码位数增加，SCRATCH 的检索性能持续递增，说明更长的哈希码能够将更多信息编码进哈希码中，从而实现检索性能的快速提升。
+\vspace{-3mm}
+\item 一般来说，大多数方法在\ Text-to-Image 任务上的检索性能要远远超过\ Image-to-Text 任务，可能的原因在于文本比图像更容易清晰地描述该文本-图像对样本的主题，从而导致使用文本来检索图像更加容易。
+\vspace{-3mm}
+\item 与\ Wiki 数据集上的实验结果相比，在\ MIRFlickr-25K 数据集上所有的方法都取得了更好地检索性能，这可能是由于两个数据集所使用的特征表示向量不同，同时不同的数据集的数据分布也不尽相同，导致相同方法在不同数据集上的检索性能有所差异。
+\end{itemize}
+
+
+
+\begin{figure*}
+%\vspace{-12mm}
+\begin{minipage}{0.5\linewidth}
+\centering
+\centerline{\includegraphics[width=8cm]{figures/FLICKR_Precision/Precision_Image_VS_Text_64}}
+\end{minipage}
+%\vspace{-6mm}
+\begin{minipage}{0.5\linewidth}
+\centering
+\centerline{\includegraphics[width=8cm]{figures/FLICKR_Precision/Precision_Text_VS_Image_64}}
+\end{minipage}
+\caption{\bf MIRFlickr-25K 数据集\ 64 位哈希码的\ Top-N precision 曲线}
+\label{curves-flickr-1}\medskip
+\end{figure*}
+
+
+\begin{figure*}
+\vspace{-6mm}
+\begin{minipage}{0.5\linewidth}
+\centering
+\centerline{\includegraphics[width=8cm]{figures/FLICKR_Precision/Precision_Image_VS_Text_128}}
+\end{minipage}
+%\vspace{-6mm}
+\begin{minipage}{0.5\linewidth}
+\centering
+\centerline{\includegraphics[width=8cm]{figures/FLICKR_Precision/Precision_Text_VS_Image_128}}
+\end{minipage}
+\caption{\bf MIRFlickr-25K 数据集\ 128 位哈希码的\ Top-N precision 曲线}
+\label{curves-flickr-2}\medskip
+\end{figure*}
+
+
+\begin{figure*}
+%\vspace{-12mm}
+\begin{minipage}{0.5\linewidth}
+\centering
+\centerline{\includegraphics[width=8cm]{figures/FLICKR_P_R/P_R_Image_Vs_Text_64}}
+\end{minipage}
+%\vspace{-6mm}
+\begin{minipage}{0.5\linewidth}
+\centering
+\centerline{\includegraphics[width=8cm]{figures/FLICKR_P_R/P_R_Text_Vs_Image_64}}
+\end{minipage}
+%\vspace{-4mm}
+\caption{\bf MIRFlickr-25K 数据集\ 64 位哈希码的\ Precision-Recall 曲线}
+\label{curves-flickr-3}\medskip
+\end{figure*}
+
+
+\begin{figure*}
+\vspace{-12mm}
+\begin{minipage}{0.5\linewidth}
+\centering
+\centerline{\includegraphics[width=8cm]{figures/Wiki_P_R/P_R_Image_Vs_Text_128}}
+\end{minipage}
+%\vspace{-6mm}
+\begin{minipage}{0.5\linewidth}
+\centering
+\centerline{\includegraphics[width=8cm]{figures/WiKi_P_R/P_R_Text_Vs_Image_128}}
+\end{minipage}
+\caption{\bf MIRFlickr-25K 数据集\ 128 位哈希码的\ Precision-Recall 曲线}
+\label{curves-flickr-4}\medskip
+\end{figure*}
+
+
+\begin{figure*}
+\vspace{-12mm}
+\begin{minipage}{0.5\linewidth}
+\centering
+\centerline{\includegraphics[width=8cm]{figures/NUS_WIDE_Precision/Precision_Image_VS_Text_64}}
+\end{minipage}
+%\vspace{-6mm}
+\begin{minipage}{0.5\linewidth}
+\centering
+\centerline{\includegraphics[width=8cm]{figures/NUS_WIDE_Precision/Precision_Text_VS_Image_64}}
+\end{minipage}
+\caption{\bf NUS-WIDE 数据集\ 64 位哈希码的\ Top-N precision 曲线}
+\label{curves-nus-1}\medskip
+\end{figure*}
+
+\begin{figure*}
+%\vspace{-12mm}
+\begin{minipage}{0.5\linewidth}
+\centering
+\centerline{\includegraphics[width=8cm]{figures/NUS_WIDE_Precision/Precision_Image_VS_Text_128}}
+\end{minipage}
+%\vspace{-6mm}
+\begin{minipage}{0.5\linewidth}
+\centering
+\centerline{\includegraphics[width=8cm]{figures/NUS_WIDE_Precision/Precision_Text_VS_Image_128}}
+\end{minipage}
+\caption{\bf NUS-WIDE 数据集\ 128 位哈希码的\ Top-N precision 曲线}
+\label{curves-nus-2}\medskip
+\end{figure*}
+
+
+
+\begin{figure*}
+\vspace{-12mm}
+\begin{minipage}{0.5\linewidth}
+\centering
+\centerline{\includegraphics[width=8cm]{figures/NUS_WIDE_P_R/P_R_Image_Vs_Text_64}}
+\end{minipage}
+%\vspace{-6mm}
+\begin{minipage}{0.5\linewidth}
+\centering
+\centerline{\includegraphics[width=8cm]{figures/NUS_WIDE_P_R/P_R_Text_Vs_Image_64}}
+\end{minipage}
+%\vspace{-4mm}
+\caption{\bf NUS-WIDE 数据集\ 64 位哈希码的\ Precision-Recall 曲线}
+\label{curves-nus-3}\medskip
+\end{figure*}
+
+
+\begin{figure*}
+\vspace{-12mm}
+\begin{minipage}{0.5\linewidth}
+\centering
+\centerline{\includegraphics[width=8cm]{figures/NUS_WIDE_P_R/P_R_Image_Vs_Text_128}}
+\end{minipage}
+%\vspace{-6mm}
+\begin{minipage}{0.5\linewidth}
+\centering
+\centerline{\includegraphics[width=8cm]{figures/NUS_WIDE_P_R/P_R_Text_Vs_Image_128}}
+\end{minipage}
+\caption{\bf NUS-WIDE 数据集\ 128 位哈希码的\ Precision-Recall 曲线}
+\label{curves-nus-4}\medskip
+\end{figure*}
+
+
+\begin{table}[tb]
+%\setlength{\belowcaptionskip}{-0.3cm}
+\small
+\center
+\begin{center}
+\caption{\bf NUS-WIDE 数据集基于\ MAP 的性能对比}
+\label{mAP_nus}
+%\vspace{-3mm}
+\label{NUSWIDEmAP}
+\begin{tabular}{cllllll}
+  \toprule[1pt]
+  Task & Method & 8 bits & 16 bits & 32 bits & 64 bits & 128 bits\\
+  \hline
+  \multirow{8}{*}{\tabincell{c}{Image\\to\\Text}}
+  & {LSSH} & {0.3829} & {0.3885} & {0.3869} & {0.3911} & {0.3877}\\
+  & {CMFH} & {0.3406} & {0.3437} & {0.3399} & {0.3409} & {0.3440}\\
+  & {SCM-seq} & {0.5013} & {0.5120} & {0.5422} & {0.5488} & {0.5483}\\
+  & {CCQ} & {0.3902} & {0.3959} & {0.3929} & {0.4010} & {0.3952}\\
+  & {SePH-km} & {0.5256} & {0.5537} &{0.5627} & {0.5622} & {0.5698}\\
+  & {SMFH} & {0.3711} & {0.4006} & {0.4461} & {0.4593} & {0.4594}\\
+  & {FSH} & {0.3620} & {0.3732} & {0.3894} & {0.4014} & {0.4084}\\
+  & {DCH} & {0.5840} & {0.5808} & {0.5907} & {0.5932} & {0.5843}\\
+  & {SCRATCH} & {\bf{0.6038}} & {\bf{0.6207}} & {\bf{0.6338}} & {\bf{0.6459}} &{\bf{0.6496}}\\
+  \hline
+  \multirow{8}{*}{\tabincell{c}{Text\\to\\Image}}
+  & {LSSH} & {0.4075} & {0.4202} & {0.3444} & {0.4231} & {0.4175}\\
+  & {CMFH} & {0.3456} & {0.3498} & {0.3435} & {0.3486} & {0.3529}\\
+  & {SCM-seq} & {0.4709} & {0.4836} & {0.5067} & {0.5141} & {0.5161}\\
+  & {CCQ} & {0.3716} & {0.3740} & {0.3712} & {0.3734} & {0.3765}\\
+  & {SePH-km} & {0.6102} & {0.6407} & {0.6515} & {0.6608} & {0.6651}\\
+  & {SMFH} & {0.3631} & {0.3789} & {0.4046} & {0.4048} & {0.3997}\\
+  & {FSH} & {0.3623} & {0.3717} & {0.3835} & {0.3973} & {0.4007}\\
+  & {DCH} & {0.7106} & {0.7103} & {0.7098} & {0.7260} & {0.7223}\\
+  & {SCRATCH} & {\bf{0.7210}} & {\bf{0.7392}} &{\bf{0.7549}} & {\bf{0.7680}} &{\bf{0.7755}}\\
+  \toprule[1pt]
+\end{tabular}
+\end{center}\smallskip
+\end{table}
+
+
+
+\subsection{NUS-WIDE 数据集实验结果}
+\esubsection{Results on NUS-WIDE}
+\label{sec:nus-wide}
+
+所有方法在\ NUS-WIDE 数据集上的\ MAP 实验结果在表\ \ref{mAP_nus} 中进行了总结，NUS-WIDE 数据集上\ 64 位和\ 128 位哈希码上的\ top-N precision 和\ precision-recall 曲线在图\ \ref{curves-nus-1}—\ref{curves-nus-4} 中画出。从这些实验结果中，我们可以得到如下结论，这些结论与\ Wiki 和\ MIRFlickr-25K 数据集上的实验结论相似：
+\begin{itemize}
+\vspace{-3mm}
+\item SCRATCH 在各个场景下的检索性能都要显著超过其他所有对比方法，验证了其在大规模数据集上的实用性。
+\vspace{-3mm}
+\item 随着哈希码位数增加，SCRATCH 的检索性能持续递增，说明更长的哈希码能够将更多信息编码进哈希码中，从而实现检索性能的快速提升。
+\vspace{-3mm}
+\item 大多数方法在\ Text-to-Image 任务上的检索性能要远远超过\ Image-to-Text 任务，这点与\ Wiki 和\ MIRFlickr-25K 数据集一致。
+\vspace{-3mm}
+\item 多种有监督跨模态哈希方法（如\ SCRATCH、DCH）的性能要远远超越其他的无监督方法（如\ CMFH 和\ FSH），说明了利用语义信息有利于哈希码的相似性保持，从而大大提升检索性能，进一步说明了利用监督语义信息的有效性。
+\vspace{-3mm}
+\item SCRATCH 在哈希码位数很低（如\ 8 或\ 16 位）的时候仍然取得了远超过其他对比方法的检索性能。
+\vspace{-3mm}
+\item SCRATCH 在\ $N$ 非常小的时候要比其他对比方法表现更好（例如在\ Image-to-Text 上），这说明\ SCRATCH 在 \ $N$ 很小时能够检索到与待查询样本更相关的数据库样本，这对检索任务来说是非常重要的。
+\end{itemize}
+
+总而言之，SCRATCH 在三个常用基准数据集上取得了极具竞争力的检索性能，说明了同时结合显式的标签语义信息和基于协同矩阵分解挖掘出的隐含语义信息可以更好地进行语义相似性的保持，从而使得生成的哈希码质量更高。而且与其他基于协同矩阵分解的跨模态方法（如\ CMFH 和\ SMFH）相比，SCRATCH 在上述三个数据集上实现了更好的检索性能，从而证明了本文提出的损失函数和优化模式的有效性，正是由于加入标签的语义信息嵌入和随机正交旋转矩阵的离散优化方案导致\ SCRATCH 远远超越了其他基于协同矩阵分解的跨模态哈希方法。
+
+
+\subsection{参数敏感性分析}
+\esubsection{Parameter sensitivity analysis}
+
+我们在前面所说的三个基准数据集上对参数敏感性进行了详尽的实验，通过每次固定其他所有变量而只对一个变量在一定范围内进行变化，得到其对应的变化曲线，从而能够更直观地观察到各个参数的最佳取值。其中，超参数\ $\lambda_1$ 和\ $\lambda_2$ 控制了两个模态协同矩阵分解项的权重，而在我们的实验中发现，这两个超参数的变化对最终结果的影响比较小，因此我们经验性的设置这两个超参数为\ $\lambda_1$ = $\lambda_2$ = 0.5。除此之外，我们也额外做了收敛性的实验来说明本文提出的\ SCRATCH 可以在很少的训练迭代次数后达到收敛状态，从而实现快速地训练优化。当对超参数\ $\mu$、$\alpha$、$\gamma$ 进行变化时，对应的三个数据集上\ 64 位哈希码进行两个跨模态检索任务所取得的 MAP 曲线在图\ \ref{curves-param-1} 和\ \ref{curves-param-2} 中给出，同时三个数据集上目标函数值关于迭代次数的变化也在图\ \ref{curves-param-2} 中画出，其中\ ``I-T'' 和\ ``T-I'' 分别代表\ Image-to-Text 和\ Text-to-Image 任务。从以上实验结果中我们可以得出以下观察和结论：
+
+
+\begin{figure}
+\setlength{\belowcaptionskip}{-0.5cm}
+%\vspace{-6mm}
+\begin{minipage}{0.5\linewidth}
+\centering
+\centerline{\includegraphics[width=8cm]{figures/Parameters/lambda}}
+\end{minipage}
+%\vspace{-6mm}
+\begin{minipage}{0.5\linewidth}
+\centering
+\centerline{\includegraphics[width=8cm]{figures/Parameters/alpha}}
+\end{minipage}
+\caption{\bf 关于超参数\ $\mu$ 和\ $\alpha$ 的参数敏感性分析}
+\label{curves-param-1}
+\end{figure}
+
+\begin{figure}
+\setlength{\belowcaptionskip}{-0.5cm}
+\vspace{6mm}
+\begin{minipage}{0.5\linewidth}
+\centering
+\centerline{\includegraphics[width=8cm]{figures/Parameters/gamma}}
+\end{minipage}
+%\vspace{-6mm}
+\begin{minipage}{0.5\linewidth}
+\centering
+\centerline{\includegraphics[width=8cm]{figures/Parameters/convergence}}
+\end{minipage}
+%\vspace{-3mm}
+\caption{\bf 关于超参数\ $\gamma$ 和迭代次数的参数敏感性分析}
+\label{curves-param-2}
+\end{figure}
+
+\begin{itemize}
+\vspace{-3mm}
+\item \ $\mu$ 和\ $\alpha$ 确实会影响\ SCRATCH 的性能，SCRATCH 在\ $\mu\approx1,000$ 且\ $\alpha\approx500$ 时取得最优结果。
+\vspace{-3mm}
+\item 当\ $\mu$ 和\ $\alpha$ 都等于零时，SCRATCH 的性能会显著下降，这意味着非线性映射和标签的语义嵌入在本文方法中起到了至关重要的作用。
+\vspace{-3mm}
+\item \ $\gamma$ 控制着正则化项的权重，当\ $\gamma\approx5$ 时\ SCRATCH 取得的检索性能是最好的。值得一提的是，当\ $\gamma$ 等于零时，SCRATCH 在\ Wiki 数据集上的检索性能急剧下降，然而在\ MIRFlickr-25K 和\ NUS-WIDE 两个相对较大规模的数据集上则没有这个问题出现，可能的原因为\ Wiki 数据集是一个小数据集，而数据量过小会导致\ SCRATCH 非常容易过拟合，因此正则化项在这种情况下起到了非常重要的避免过拟合的作用；然而\ MIRFlickr-25K 和\ NUS-WIDE 两个数据集的数据规模相对足够大，因此\ SCRATCH 在这两个数据集上不容易发生过拟合现象，从而导致正则化项的作用并不明显。
+\vspace{-3mm}
+\item SCRATCH 在所有三个数据集上均可在很少的迭代次数后进入收敛状态，进一步证实了本文提出的优化策略的有效性和实用性。
+\end{itemize}
+
+
+
+
+\subsection{时间消耗分析}
+\esubsection{Time cost analysis}
+
+为了验证本文提出的\ SCRATCH 模型的有效性，我们进一步在\ MIRFlickr-25K 数据集上比较了所有方法的训练时间（以秒为单位计时），哈希码长度取\ 8、16、32、64 和\ 128 位，从而便于直观地看出哈希码位数对训练时间的影响，最终的实验结果在表\ \ref{training_time} 中进行展示。从实验结果可以看出，随着哈希码位数的增加，SCRATCH 的训练时间并没有显著增加，说明\ SCRATCH 可以方便的对高维数据进行跨模态哈希学习；由于\ CMFH 是无监督跨模态哈希方法，因此所有对比方法中只有\ CMFH 的训练速度快于\ SCRATCH，然而，正如前面小节所讲的，考虑到速度和检索精度的平衡，CMFH的检索精度要远远低于\ SCRATCH，所以综合多方面考虑检索速度和检索精度等，SCRATCH 在三个数据集上均表现良好，表明\ SCRATCH 可有效且方便地扩展到大规模数据集上。
+
+\begin{table}[t]
+\centering
+\small
+\caption{\bf MIRFlickr-25K 数据集上的训练时间对比（以秒计时）}
+\label{training_time}
+\resizebox{12cm}{!}{
+\begin{tabular}{lrrrrrr}
+\toprule[1pt]
+%\hline
+\multirow{1}{*}{Method}    & 8 bits & 16 bits & 32 bits & 64 bits & 128 bits \\
+\hline
+ {LSSH}  & {34.41} & {29.89} & {29.67} & {32.44} & {38.17} \\
+ {CMFH} & {1.48} & {1.58} & {1.57} & {1.64} & {1.90}\\
+ {SCM-seq} & {8.84} & {12.65} & {22.90} & {42.85} & {77.33}\\
+ {CCQ} & {6.33} & {9.12} & {17.26} & {29.33} & {77.41}\\
+ {SePH-km} & {3328.20} & {3411.26} & {3576.82} & {3805.26} & {4451.09}\\
+ {SMFH} & {7.32} & {6.89} & {15.40} & {14.60} & {16.84}\\
+ {FSH} & {109.59} & {108.25} & {107.52} & {109.73} & {115.55}\\
+ {DCH} & {3.76} & {4.36} & {5.49} & {11.56} & {37.36}\\
+ {SCRATCH} & {1.59} & {1.59} & {1.88} & {2.44} & {3.68}\\
+\toprule[1pt]
+\end{tabular}
+}
+\setlength{\belowcaptionskip}{-0.5cm}
+\smallskip
+\end{table}
+
+
+
+\begin{table}[b]
+\setlength{\abovecaptionskip}{-0.5cm}
+\small
+\center
+\setlength{\abovecaptionskip}{0.1cm}
+\begin{center}
+\caption{\bf MIRFlickr-25K 数据集上\ SCRATCH 和\ DCMH 的\ MAP\ 对比}
+\label{deep_extension}
+\begin{tabular}{cllllll}
+  \toprule[1pt]
+  Task & Method & 8 bits & 16 bits & 32 bits & 64 bits & 128 bits\\
+  \hline
+  \multirow{2}{*}{\tabincell{c}{$I\rightarrow T$}}
+  & {DCMH} & {0.7276} & {0.7247} & {0.7435} & {0.7484} & {0.7571}\\
+  & {SCRATCH} & {\bf{0.7587}} & {\bf{0.7803}} &{\bf{0.7978}} & {\bf{0.8093}} &{\bf{0.8230}}\\
+  \hline
+  \multirow{2}{*}{\tabincell{c}{$T\rightarrow I$}}
+  & {DCMH} & {0.7453} & {0.7580} & {0.7692} & {0.7758} & {0.7819}\\
+  & {SCRATCH} & {\bf{0.7532}} & {\bf{0.7797}} &{\bf{0.7913}} & {\bf{0.7979}} & {\bf{0.8160}}\\
+  \toprule[1pt]
+\end{tabular}
+\end{center}
+\smallskip
+\end{table}
+
+
+\subsection{与深度哈希方法对比}
+\esubsection{Comparison with Deep Hashing}
+
+为了说明本文提出的损失函数及优化方案的有效性，我们进一步在\ MIRFlickr-25K 数据集上与一个当前性能较好的深度跨模态哈希（DCMH）\cite{jiang2017dcmh}进行了实验对比。遵循\ DCMH 的实验设置，我们首先借助了\ DCMH 中使用的\ CNN-F\cite{ken14cnnf} 网络提取了图像模态的深度特征，然后在得到的深度图像特征和原始的文本特征上使用\ SCRATCH 进行跨模态哈希检索，最终的\ MAP 实验结果在表\ \ref{deep_extension} 中进行了总结，从结果中可以得出如下观察：
+\begin{itemize}
+\vspace{-3mm}
+\item SCRATCH 在两个跨模态检索任务上的性能均超过了\ DCMH。
+\vspace{-3mm}
+\item 随着哈希码位数增加，SCRATCH 的检索性能持续递增，说明更长的哈希码能够将更多信息编码进哈希码中，从而实现检索性能的快速提升。
+\vspace{-3mm}
+\item SCRATCH 在\ Image-to-Text 任务上的随着哈希码位数的变化，检索性能均大大优于\ DCMH。
+\vspace{-3mm}
+\item SCRATCH 在深度特征上的\ Image-to-Text 检索性能要远远超过在人工提取特征上的性能，且使用深度图像特征的\ SCRATCH 在哈希码位数很低（如\ 8 或\ 16 位）时\ Image-to-Text 任务的检索性能已经超过了使用人工特征\ SCRATCH 在高位哈希码（128 位）的性能，说明深度卷积神经网络提取出的图像特征的优越性。
+\end{itemize}
+
+
+
+%
+%\subsection{分类扩展}
+%\esubsection{Extension to classification}
+%
+%
+%
+%\begin{table*}[t]\scriptsize
+%\caption{CLASSIFICATION performance comparison of various models on MIRFlickr-25000 and NUS-WIDE.}\label{table_classification}
+%\centering
+%\begin{tabular}{cccccccccccccc}
+%\toprule[1pt]
+%\multirow{3}{*}{Task} & \multirow{3}{*}{Method} & \multicolumn{6}{c}{MIRFlickr} & \multicolumn{6}{c}{NUS-WIDE}\\
+%\cmidrule(lr){3-8} \cmidrule(lr){9-14}
+%&& \multicolumn{3}{c}{MacroF1} & \multicolumn{3}{c}{Accuracy} & \multicolumn{3}{c}{MacroF1} & \multicolumn{3}{c}{Accuracy} \\
+%
+%\cmidrule(lr){3-5}  \cmidrule(lr){6-8} \cmidrule(lr){9-11} \cmidrule(lr){12-14} & &16 bits & 32 bits & 64 bits & 16 bits & 32 bits & 64bits & 16 bits & 32 bits & 64 bits & 16 bits & 32 bits & 64bits\\ \hline
+%\multirow{8}{*}{\tabincell{c}{ Image }}
+%
+% {}&CVH & 0.0627 & 0.0486 & 0.0463 & 0.1428 & 0.1229 & 0.1184  & 0.1129 & 0.0858 & 0.0651 & 0.1648 & 0.1394 & 0.1288 \\
+% {}&IMH & 0.0521 & 0.0586  &0.0590& 0.0998& 0.1207 & 0.1250 & 0.0806 & 0.0890  &0.1001& 0.1021& 0.1060 & 0.1233 \\
+% {}&SCM-seq  & 0.0834 & 0.0820& 0.0900 & 0.1580 & 0.1642& 0.1814 & 0.2062 & 0.1985& 0.2159& 0.3051 & 0.2798& 0.3066\\
+% {}&LSSH & 0.0750 & 0.0722 & 0.1115 & 0.1144 & 0.1106 & 0.1653 & 0.1908 & 0.2030 & 0.2227 & 0.2283 & 0.2362 & 0.2781 \\
+% {}&CMFH & 0.0824 & 0.0243 & 0.0265 & 0.1488 & 0.0831 & 0.0830 & 0.0505 & 0.0492 & 0.0484 & 0.1075 & 0.1098 & 0.1093 \\
+% {}&FSH & 0.0801 & 0.0874 & 0.0910 & 0.1415 & 0.1410 & 0.1448 & 0.1623 & 0.2026 & 0.2320 & 0.2324 & 0.2915 & 0.3132 \\
+% {}&SePH-km & 0.1664 & 0.1926 & 0.1997 & 0.2719 & 0.2704 & 0.2732 & 0.2718 & 0.2781 & 0.2561 & 0.3520 & 0.3470 & 0.3414\\
+% {}&SRDMH & \textbf {0.2240} & {\textbf{0.2554}} & {\textbf{0.2784}} & {\textbf{0.2793}} & {\textbf{0.2710}} & {\textbf{0.2749}} & \textbf {0.2919} & {\textbf{0.3036}} & {\textbf{0.4251}}& {\textbf{0.3702}} & {\textbf{0.3896}} & {\textbf{0.4207}} \\
+%\hline
+%\multirow{8}{*}{\tabincell{c}{ Text }}
+% {}&CVH & 0.0716 & 0.0673 & 0.0758 &0.1565 & 0.1482 & 0.1513 & 0.1497 & 0.1580 & 0.1652 &0.2222 & 0.2170 & 0.2296 \\
+% {}&IMH & 0.0458 & 0.0688 & 0.1218 &0.0893 & 0.1156 & 0.1637 & 0.0732& 0.1424 & 0.2158 &0.0815& 0.1581 & 0.2477 \\
+% {}&SCM-seq & 0.1682 & 0.2464 & 0.3125 & 0.3187 & 0.3597 & 0.3830 & 0.3770& 0.4336 & 0.4765 & {\textbf {0.4933}} & 0.5028 & 0.5357\\
+% {}&LSSH & 0.1343 & 0.2033 & 0.2503  & 0.1495 & 0.1966 & 0.2622 & 0.2794& 0.3060 & 0.3422  & 0.3326 & 0.3492 & 0.3958\\
+% {}&CMFH & 0.1068 & 0.0312 & 0.0314& 0.1838 & 0.0806 & 0.0806 & 0.0519 & 0.0504 & 0.0502 & 0.1114 & 0.1115 & 0.1087\\
+% {}&FSH & 0.0738 & 0.0882 & 0.0992  & 0.1270 & 0.1454 & 0.1637 & 0.1650& 0.2294 & 0.2747 & 0.2242 & 0.3269 & 0.3677\\
+% {}&SePH-km & 0.2135 & 0.2802 & 0.2818& 0.3353 & 0.3807 & 0.3860 & 0.4021 & 0.4225 & 0.3957 & 0.4923 & 0.5026 & 0.5048 \\
+% {}&SRDMH & {\textbf {0.3018}} & {\textbf{0.3658}} & {\textbf{0.4085}}& {\textbf {0.3375}} & {\textbf{0.3824}} & {\textbf{0.3867}} & \textbf {0.4022} & {\textbf{0.4545}} & {\textbf{0.5608}}& {\textbf{0.4933}} & {\textbf{0.5069}} & {\textbf{0.5387}} \\\hline
+%\toprule[1pt]
+%\end{tabular}
+%\end{table*}
+
+\section{本章小结}
+\esection{Summary}
+
+本章我们通过\ MAP 对比、top-N precision 和\ precision-recall 曲线以及训练时间对比等实验结果来充分验证了\ SCRATCH 的有效性，同时与深度跨模态哈希方法对比，尽管使用深度卷积神经网络的\ SCRATCH 不是一个端到端的深度模型（不可同时训练网络和\ SCRATCH 模型，特征提取和模型训练是分开的），但是仍然取得了超越当前先进的深度跨模态哈希方法（DCMH）的检索性能，这进一步说明了\ SCRATCH 采用的损失函数和优化策略的先进性和有效性。
+

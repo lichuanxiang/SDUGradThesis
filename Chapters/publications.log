@@ -1,0 +1,38 @@
+This is pdfTeX, Version 3.1415926-2.3-1.40.12 (MiKTeX 2.9) (preloaded format=pdflatex 2016.9.17)  3 MAR 2019 14:46
+entering extended mode
+**F:/backups/校内/毕业论文/PHDthesis-LuoXin-ver2-匿名*-*副本/Chapters
+/publications.tex
+
+("F:/backups/校内/毕业论文/PHDthesis-LuoXin-ver2-匿名 - 副本/Chapters
+/publications.tex"
+LaTeX2e <2011/06/27>
+Babel <v3.8m> and hyphenation patterns for loaded.
+
+! LaTeX Error: Environment publications undefined.
+
+See the LaTeX manual or LaTeX Companion for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.1 \begin{publications}
+                        
+? 
+! Emergency stop.
+ ...                                              
+                                                  
+l.1 \begin{publications}
+                        
+Your command was ignored.
+Type  I <command> <return>  to replace it with another command,
+or  <return>  to continue without it.
+
+ 
+Here is how much of TeX's memory you used:
+ 9 strings out of 495354
+ 501 string characters out of 3182515
+ 44842 words of memory out of 3000000
+ 3277 multiletter control sequences out of 15000+200000
+ 3640 words of font info for 14 fonts, out of 3000000 for 9000
+ 14 hyphenation exceptions out of 8191
+ 5i,0n,4p,130b,16s stack positions out of 5000i,500n,10000p,200000b,50000s
+!  ==> Fatal error occurred, no output PDF file produced!
